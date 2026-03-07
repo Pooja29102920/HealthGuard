@@ -1,0 +1,604 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0"/>
+  <meta name="theme-color" content="#1d4ed8"/>
+  <meta name="mobile-web-app-capable" content="yes"/>
+  <meta name="apple-mobile-web-app-capable" content="yes"/>
+  <title>HealthGuard – Caregiver</title>
+  <link rel="manifest" href="manifest.json"/>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&display=swap" rel="stylesheet"/>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; height: 100%; font-family: 'DM Sans', sans-serif; background: #eff6ff; }
+    .serif { font-family: 'DM Serif Display', serif; }
+
+    #app { display: flex; min-height: 100vh; min-height: 100dvh; }
+
+    /* Sidebar */
+    #sidebar {
+      width: 240px; background: #fff; border-right: 1px solid #e2e8f0;
+      display: flex; flex-direction: column; flex-shrink: 0;
+      position: sticky; top: 0; height: 100vh; height: 100dvh;
+      overflow-y: auto; z-index: 50;
+      transition: transform .28s cubic-bezier(.4,0,.2,1);
+    }
+    @media (max-width: 767px) {
+      #sidebar {
+        position: fixed; top: 0; left: 0; bottom: 0; height: 100%;
+        transform: translateX(-100%); box-shadow: 4px 0 24px rgba(0,0,0,.15);
+      }
+      #sidebar.open { transform: translateX(0); }
+      #sdOverlay { display: block !important; }
+    }
+    #sdOverlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.4); z-index: 49; }
+
+    .nav-item { display: flex; align-items: center; gap: 10px; padding: 10px 16px; margin: 2px 8px; border-radius: 10px; cursor: pointer; color: #94a3b8; font-size: .875rem; font-weight: 500; transition: all .15s; user-select: none; }
+    .nav-item:hover { background: #dbeafe; color: #1d4ed8; }
+    .nav-item.active { background: #1d4ed8; color: #fff; }
+
+    #mainWrap { flex: 1; display: flex; flex-direction: column; min-width: 0; overflow: hidden; }
+    #topbar { background: #fff; border-bottom: 1px solid #e2e8f0; padding: 10px 16px; display: flex; align-items: center; gap: 10px; flex-shrink: 0; position: sticky; top: 0; z-index: 30; }
+    #menuBtn { display: none; background: none; border: none; cursor: pointer; padding: 4px; color: #64748b; }
+    @media (max-width: 767px) { #menuBtn { display: flex; align-items: center; } }
+
+    #pageContent { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 16px; padding-bottom: 88px; }
+    @media (min-width: 768px) { #pageContent { padding: 20px; padding-bottom: 20px; } }
+
+    /* Bottom nav */
+    #bottomNav { display: none; position: fixed; bottom: 0; left: 0; right: 0; background: #fff; border-top: 1px solid #e2e8f0; padding: 6px 0 env(safe-area-inset-bottom, 6px); z-index: 40; box-shadow: 0 -2px 12px rgba(0,0,0,.08); }
+    @media (max-width: 767px) { #bottomNav { display: flex; } }
+    .bnav-item { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 4px 2px; cursor: pointer; color: #94a3b8; font-size: .6rem; font-weight: 600; transition: color .15s; border: none; background: none; font-family: 'DM Sans', sans-serif; }
+    .bnav-item.active { color: #1d4ed8; }
+    .bnav-item span:first-child { font-size: 1.3rem; }
+
+    .card { background: #fff; border-radius: 14px; box-shadow: 0 1px 6px rgba(0,0,0,.07); padding: 16px; }
+    @media (min-width: 768px) { .card { padding: 20px; border-radius: 16px; } }
+
+    .inp { display: block; width: 100%; border: 1.5px solid #e2e8f0; border-radius: 10px; padding: 10px 13px; font-size: 16px; outline: none; font-family: inherit; background: #fafafa; transition: border-color .2s; }
+    .inp:focus { border-color: #1d4ed8; background: #fff; }
+    select.inp { background: #fff; }
+    textarea.inp { resize: vertical; min-height: 80px; }
+
+    .btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; background: #1d4ed8; color: #fff; border: none; border-radius: 10px; padding: 11px 18px; font-size: .875rem; font-weight: 600; cursor: pointer; font-family: inherit; transition: background .2s, transform .1s; -webkit-tap-highlight-color: transparent; }
+    .btn:hover { background: #1e40af; }
+    .btn:active { transform: scale(.97); }
+    .btn.full { width: 100%; }
+    .btn-teal   { background: #0f766e; } .btn-teal:hover   { background: #115e59; }
+    .btn-red    { background: #ef4444; } .btn-red:hover    { background: #dc2626; }
+    .btn-purple { background: #7c3aed; } .btn-purple:hover { background: #6d28d9; }
+
+    .badge { display: inline-block; border-radius: 999px; font-size: .68rem; font-weight: 700; padding: 2px 8px; }
+    .sec { display: none !important; }
+    .sec.on { display: block !important; }
+
+    #toast { position: fixed; bottom: 90px; left: 50%; transform: translateX(-50%); background: #1e293b; color: #fff; padding: 10px 20px; border-radius: 99px; font-size: .83rem; font-weight: 500; opacity: 0; pointer-events: none; transition: opacity .3s; z-index: 500; max-width: calc(100vw - 32px); text-align: center; white-space: nowrap; }
+    @media (min-width: 768px) { #toast { bottom: 24px; } }
+    #toast.show { opacity: 1; }
+
+    .pcard { border: 2px solid #e2e8f0; border-radius: 13px; padding: 14px; transition: all .15s; }
+    .pcard:hover { border-color: #1d4ed8; box-shadow: 0 4px 16px rgba(0,0,0,.08); }
+
+    .stab { padding: 7px 14px; border-radius: 8px; font-size: .82rem; font-weight: 600; cursor: pointer; border: none; font-family: inherit; transition: all .15s; }
+    .stab.on { background: #1d4ed8; color: #fff; }
+    .stab:not(.on) { background: #dbeafe; color: #1e40af; }
+
+    #ptModal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.5); z-index: 200; align-items: flex-end; justify-content: center; padding: 0; }
+    @media (min-width: 768px) { #ptModal { align-items: center; padding: 16px; } }
+    #ptModal.open { display: flex; }
+    #ptModalInner { background: #fff; width: 100%; max-width: 560px; border-radius: 20px 20px 0 0; max-height: 90vh; overflow: hidden; display: flex; flex-direction: column; }
+    @media (min-width: 768px) { #ptModalInner { border-radius: 18px; max-height: 85vh; } }
+
+    .ok-msg  { color: #166534; font-size: .78rem; margin-top: 6px; }
+    .err-msg { color: #b91c1c; font-size: .78rem; margin-top: 6px; }
+
+    #permBanner { background: linear-gradient(90deg,#1d4ed8,#0891b2); color: #fff; padding: 10px 16px; display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; font-size: .8rem; flex-shrink: 0; }
+    #permBanner.gone { display: none; }
+
+    .sos-dot { display: inline-block; width: 8px; height: 8px; background: #ef4444; border-radius: 50%; animation: sdot 1.5s infinite; margin-left: 4px; }
+    @keyframes sdot { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.4;transform:scale(1.5)} }
+
+    @media (min-width: 768px) { .md-grid-2 { grid-template-columns: 1fr 1fr !important; } }
+
+    /* Manual patient form responsive grid */
+    .pm-grid { display: grid; grid-template-columns: 1fr; gap: 8px; }
+    @media (min-width: 480px) { .pm-grid { grid-template-columns: 1fr 1fr; } .pm-full { grid-column: 1 / -1; } }
+  </style>
+</head>
+<body>
+<div id="app">
+
+  <div id="sdOverlay" onclick="closeSide()"></div>
+
+  <!-- ════════ SIDEBAR ════════ -->
+  <aside id="sidebar">
+    <div style="padding:18px 18px 10px">
+      <div style="display:flex;align-items:center;gap:8px">
+        <svg width="20" height="20" fill="none" stroke="#1d4ed8" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/></svg>
+        <span class="serif" style="color:#1e3a8a;font-size:1.1rem;font-weight:700">HealthGuard</span>
+      </div>
+    </div>
+    <div style="margin:0 10px 12px;background:#eff6ff;border-radius:12px;padding:12px 14px">
+      <p style="font-size:.68rem;font-weight:600;color:#1d4ed8;text-transform:uppercase;letter-spacing:.05em">Caregiver</p>
+      <p id="sdName"  style="font-weight:700;color:#1e3a8a;font-size:.875rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">—</p>
+      <p id="sdEmail" style="font-size:.72rem;color:#93c5fd;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">—</p>
+    </div>
+    <nav style="flex:1;padding:0 8px">
+      <div class="nav-item active" data-sec="patients"     onclick="nav(this,'My Patients')">👥 My Patients</div>
+      <div class="nav-item"        data-sec="assign"       onclick="nav(this,'Assign Medicine')">💊 Assign Medicine</div>
+      <div class="nav-item"        data-sec="message"      onclick="nav(this,'Send Message')">📩 Send Message</div>
+      <div class="nav-item"        data-sec="appointments" onclick="nav(this,'Appointments')">📅 Appointments</div>
+      <div class="nav-item"        data-sec="reports"      onclick="nav(this,'Reports')">📋 Reports</div>
+      <div class="nav-item"        data-sec="location"     onclick="nav(this,'Location')">📍 Location</div>
+      <div class="nav-item"        data-sec="history"      onclick="nav(this,'Activity Log')">🕐 Activity Log</div>
+    </nav>
+    <div style="padding:8px 8px 16px">
+      <div class="nav-item" style="color:#ef4444" onclick="doLogout()">🚪 Sign Out</div>
+    </div>
+  </aside>
+
+  <!-- ════════ MAIN ════════ -->
+  <div id="mainWrap">
+
+    <div id="permBanner">
+      <span>🔔 Enable notifications — get instant SOS, medicine & appointment alerts</span>
+      <div style="display:flex;gap:8px;flex-shrink:0">
+        <button onclick="enableNotifs()" style="background:#fff;color:#1d4ed8;border:none;border-radius:8px;padding:5px 12px;font-weight:700;font-size:.78rem;cursor:pointer;font-family:inherit">Enable</button>
+        <button onclick="document.getElementById('permBanner').classList.add('gone')" style="background:rgba(255,255,255,.2);color:#fff;border:none;border-radius:8px;padding:5px 10px;font-size:.78rem;cursor:pointer">✕</button>
+      </div>
+    </div>
+
+    <div id="topbar">
+      <button id="menuBtn" onclick="openSide()">
+        <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16"/></svg>
+      </button>
+      <div style="flex:1">
+        <h2 id="pageTitle" class="serif" style="margin:0;font-size:1.05rem;color:#1e293b">My Patients</h2>
+        <p id="dateStr" style="margin:0;font-size:.7rem;color:#94a3b8"></p>
+      </div>
+      <span class="badge" style="background:#dbeafe;color:#1d4ed8">Caregiver</span>
+      <div id="bellSlot"></div>
+    </div>
+
+    <div id="pageContent">
+
+      <!-- ══ PATIENTS ══ -->
+      <div id="sec-patients" class="sec on">
+        <!-- Add patient card -->
+        <div class="card" style="margin-bottom:14px">
+          <h3 style="margin:0 0 12px;font-size:.95rem;font-weight:700;color:#1e293b">➕ Add Patient</h3>
+          <div style="display:flex;gap:8px;margin-bottom:12px">
+            <button class="stab on" id="tabEmail"  onclick="switchAddTab('email')">By Email</button>
+            <button class="stab"    id="tabManual" onclick="switchAddTab('manual')">Manual</button>
+          </div>
+          <div id="addEmail">
+            <p style="font-size:.75rem;color:#94a3b8;margin:0 0 8px">Link a patient with a HealthGuard account:</p>
+            <div style="display:flex;gap:8px">
+              <input id="ptEmail" type="email" class="inp" placeholder="patient@example.com" style="flex:1"/>
+              <button class="btn" style="flex-shrink:0" onclick="addByEmail()">Link</button>
+            </div>
+            <p id="emailMsg" class="hidden"></p>
+          </div>
+          <div id="addManual" style="display:none">
+            <p style="font-size:.75rem;color:#94a3b8;margin:0 0 8px">Add patient without an account:</p>
+            <div class="pm-grid">
+              <input id="pmName"      class="inp" placeholder="Full name *"/>
+              <input id="pmAge"       class="inp" type="number" placeholder="Age *"/>
+              <input id="pmCondition" class="inp" placeholder="Condition"/>
+              <input id="pmContact"   class="inp" placeholder="Contact"/>
+              <input id="pmNotes"     class="inp pm-full" placeholder="Notes"/>
+            </div>
+            <button class="btn" style="margin-top:10px" onclick="addManual()">+ Add Patient</button>
+            <p id="manualMsg" class="hidden"></p>
+          </div>
+        </div>
+
+        <!-- Patient list -->
+        <div class="card">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+            <h3 style="margin:0;font-size:.95rem;font-weight:700;color:#1e293b">Patient List</h3>
+            <span id="ptCount" class="badge" style="background:#dbeafe;color:#1d4ed8">0 patients</span>
+          </div>
+          <div id="ptList" style="display:grid;gap:10px">
+            <p style="color:#94a3b8;font-size:.85rem">No patients yet.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══ ASSIGN MEDICINE ══ -->
+      <div id="sec-assign" class="sec">
+        <div class="card">
+          <h3 style="margin:0 0 4px;font-size:.95rem;font-weight:700;color:#1e293b">💊 Assign Medicine</h3>
+          <p style="margin:0 0 14px;font-size:.75rem;color:#94a3b8">Patient gets a pop-up notification when you assign a medicine.</p>
+          <div style="display:grid;gap:14px" class="md-grid-2">
+            <div style="display:flex;flex-direction:column;gap:10px">
+              <select id="asnPt" class="inp" onchange="renderAssigned()"><option value="">— Select patient —</option></select>
+              <input id="asnName"  class="inp" placeholder="Medicine name *"/>
+              <input id="asnDose"  class="inp" placeholder="Dosage *"/>
+              <input id="asnTime"  class="inp" type="time"/>
+              <input id="asnNotes" class="inp" placeholder="Instructions (optional)"/>
+              <button class="btn full" onclick="assignMed()">💊 Assign</button>
+              <p id="asnMsg" class="hidden"></p>
+            </div>
+            <div>
+              <p style="margin:0 0 10px;font-weight:600;font-size:.85rem;color:#374151">Assigned by you</p>
+              <div id="asnList"><p style="color:#94a3b8;font-size:.85rem">Select patient above.</p></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══ SEND MESSAGE ══ -->
+      <div id="sec-message" class="sec">
+        <div class="card" style="max-width:480px">
+          <h3 style="margin:0 0 4px;font-size:.95rem;font-weight:700;color:#1e293b">📩 Send Message to Patient</h3>
+          <p style="margin:0 0 14px;font-size:.75rem;color:#94a3b8">Patient gets an instant pop-up + bell notification.</p>
+          <div style="display:flex;flex-direction:column;gap:10px">
+            <select id="msgPt" class="inp"><option value="">— Select patient —</option></select>
+            <textarea id="msgText" class="inp" rows="4" placeholder="Type your message…"></textarea>
+            <button class="btn full btn-purple" onclick="sendMessage()">📩 Send Notification</button>
+            <p id="msgStatus" style="font-size:.8rem;text-align:center;display:none"></p>
+          </div>
+          <div style="margin-top:16px;padding-top:14px;border-top:1px solid #f1f5f9">
+            <p style="margin:0 0 10px;font-weight:600;font-size:.85rem;color:#374151">Recently Sent</p>
+            <div id="sentList"><p style="color:#94a3b8;font-size:.85rem">None yet.</p></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══ APPOINTMENTS ══ -->
+      <div id="sec-appointments" class="sec">
+        <div class="card">
+          <h3 style="margin:0 0 4px;font-size:.95rem;font-weight:700;color:#1e293b">📅 Appointments</h3>
+          <p style="margin:0 0 10px;font-size:.75rem;color:#94a3b8">You get a pop-up 15 min before each appointment. Patients notify you when they book.</p>
+          <select id="apptFilter" class="inp" style="max-width:280px;margin-bottom:12px" onchange="renderCgAppts()"><option value="">— All patients —</option></select>
+          <div id="cgApptList"><p style="color:#94a3b8;font-size:.85rem">No appointments.</p></div>
+        </div>
+      </div>
+
+      <!-- ══ REPORTS ══ -->
+      <div id="sec-reports" class="sec">
+        <div class="card">
+          <h3 style="margin:0 0 10px;font-size:.95rem;font-weight:700;color:#1e293b">📋 Reports</h3>
+          <select id="repFilter" class="inp" style="max-width:280px;margin-bottom:12px" onchange="renderCgReports()"><option value="">— All patients —</option></select>
+          <div id="cgRepList"><p style="color:#94a3b8;font-size:.85rem">No reports.</p></div>
+        </div>
+      </div>
+
+      <!-- ══ LOCATION ══ -->
+      <div id="sec-location" class="sec">
+        <div class="card" style="max-width:440px">
+          <h3 style="margin:0 0 4px;font-size:.95rem;font-weight:700;color:#1e293b">📍 Patient Location</h3>
+          <p style="margin:0 0 12px;font-size:.75rem;color:#94a3b8">You get an instant 🚨 SOS alert pop-up when a patient sends SOS.</p>
+          <select id="locFilter" class="inp" style="margin-bottom:12px" onchange="renderCgLoc()"><option value="">— Select patient —</option></select>
+          <div id="cgLocInfo"><p style="color:#94a3b8;font-size:.85rem">Select patient above.</p></div>
+          <div style="margin-top:16px;padding-top:14px;border-top:1px solid #f1f5f9">
+            <p style="margin:0 0 8px;font-weight:600;font-size:.85rem;color:#374151">Your Location</p>
+            <button class="btn btn-teal" onclick="getMyLoc()">📡 Get My Location</button>
+            <div id="myLoc" style="margin-top:8px;font-size:.8rem;color:#64748b"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══ HISTORY ══ -->
+      <div id="sec-history" class="sec">
+        <div class="card">
+          <h3 style="margin:0 0 10px;font-size:.95rem;font-weight:700;color:#1e293b">🕐 Activity Log</h3>
+          <select id="histFilter" class="inp" style="max-width:280px;margin-bottom:12px" onchange="renderCgHist()"><option value="">— Select patient —</option></select>
+          <div id="cgHistList"><p style="color:#94a3b8;font-size:.85rem">Select patient above.</p></div>
+        </div>
+      </div>
+
+    </div><!-- /pageContent -->
+
+    <!-- bottom nav mobile -->
+    <nav id="bottomNav">
+      <button class="bnav-item active" data-sec="patients"     onclick="bnav(this,'My Patients')"><span>👥</span><span>Patients</span></button>
+      <button class="bnav-item"        data-sec="assign"       onclick="bnav(this,'Assign Medicine')"><span>💊</span><span>Medicines</span></button>
+      <button class="bnav-item"        data-sec="message"      onclick="bnav(this,'Send Message')"><span>📩</span><span>Message</span></button>
+      <button class="bnav-item"        data-sec="appointments" onclick="bnav(this,'Appointments')"><span>📅</span><span>Appts</span></button>
+      <button class="bnav-item"        data-sec="location"     onclick="bnav(this,'Location')"><span>📍</span><span>Location</span></button>
+    </nav>
+
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<!-- patient detail modal -->
+<div id="ptModal">
+  <div id="ptModalInner">
+    <div id="ptModalHead" style="background:linear-gradient(135deg,#1d4ed8,#1e40af);color:#fff;padding:16px 20px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0">
+      <h3 id="modalTitle" class="serif" style="margin:0;font-size:1rem">Patient Details</h3>
+      <button onclick="closeModal()" style="background:none;border:none;color:#fff;font-size:1.4rem;cursor:pointer;line-height:1">×</button>
+    </div>
+    <div id="modalBody" style="padding:16px;overflow-y:auto;flex:1"></div>
+  </div>
+</div>
+
+<script src="js/storage.js"></script>
+<script src="js/location.js"></script>
+<script src="js/notifications.js"></script>
+<script>
+/* ── Auth ── */
+const U = Storage.currentUser();
+if (!U || U.role !== 'caregiver') { location.href='index.html'; throw 0; }
+const CID = U.id;
+
+document.getElementById('sdName').textContent  = U.name;
+document.getElementById('sdEmail').textContent = U.email;
+document.getElementById('dateStr').textContent = new Date().toLocaleDateString('en-US',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
+
+/* ── Notif permission ── */
+if (window.Notification && Notification.permission==='granted') document.getElementById('permBanner').classList.add('gone');
+function enableNotifs(){
+  Notif.requestPermission(ok=>{ document.getElementById('permBanner').classList.add('gone'); if(ok) toast('🔔 Alerts enabled — you\'ll get SOS & medicine pop-ups!'); });
+}
+
+/* ── Bell + cross-tab listener ── */
+Notif.injectBell(document.getElementById('bellSlot'), U.id, '#1d4ed8');
+Notif.startListening(U.id, n => {
+  // extra UI refresh on SOS
+  if (n.type==='sos_alert') { const lf=document.getElementById('locFilter'); if(lf&&lf.value) renderCgLoc(); renderPatients(); }
+  if (n.type==='new_appointment'||n.type==='new_medicine') { if(document.getElementById('sec-appointments').classList.contains('on')) renderCgAppts(); }
+});
+
+/* ── 15-min appointment checker ── */
+Notif.startApptCheck(()=>{
+  const rows=[]; myPatients().forEach(p=>Storage.appointmentsFor(p.id).forEach(a=>rows.push({appt:a,patientName:p.name})));
+  return rows;
+}, CID);
+
+/* ── Sidebar ── */
+function openSide()  { document.getElementById('sidebar').classList.add('open'); document.getElementById('sdOverlay').style.display='block'; }
+function closeSide() { document.getElementById('sidebar').classList.remove('open'); document.getElementById('sdOverlay').style.display='none'; }
+
+/* ── Nav ── */
+const REFRESH = {
+  patients: renderPatients,
+  assign:   ()=>{ fillDropdowns(); renderAssigned(); },
+  message:  ()=>{ fillDropdowns(); renderSentMessages(); },
+  appointments:()=>{ fillDropdowns(); renderCgAppts(); },
+  reports:  ()=>{ fillDropdowns(); renderCgReports(); },
+  location: ()=>{ fillDropdowns(); renderCgLoc(); },
+  history:  ()=>{ fillDropdowns(); renderCgHist(); },
+};
+function _switchSec(secId, title){
+  document.querySelectorAll('.sec').forEach(s=>s.classList.remove('on'));
+  document.getElementById('sec-'+secId).classList.add('on');
+  document.getElementById('pageTitle').textContent = title;
+  if(REFRESH[secId]) REFRESH[secId]();
+}
+function nav(el, title){
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  el.classList.add('active');
+  document.querySelectorAll('.bnav-item').forEach(b=>b.classList.toggle('active',b.dataset.sec===el.dataset.sec));
+  _switchSec(el.dataset.sec, title); closeSide();
+}
+function bnav(el, title){
+  document.querySelectorAll('.bnav-item').forEach(b=>b.classList.remove('active'));
+  el.classList.add('active');
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.toggle('active',n.dataset.sec===el.dataset.sec));
+  _switchSec(el.dataset.sec, title);
+}
+
+/* ── Toast ── */
+function toast(msg,dur=2800){ const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),dur); }
+
+/* ── Helpers ── */
+function esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function myPatients(){ return Storage.patientsForCaregiver(CID); }
+function showMsg(id,txt,ok){ const e=document.getElementById(id); e.textContent=txt; e.className=ok?'ok-msg':'err-msg'; e.classList.remove('hidden'); setTimeout(()=>e.classList.add('hidden'),4000); }
+
+/* ── Add patient tabs ── */
+function switchAddTab(t){
+  const e=t==='email';
+  document.getElementById('addEmail').style.display=e?'block':'none';
+  document.getElementById('addManual').style.display=e?'none':'block';
+  document.getElementById('tabEmail').classList.toggle('on',e);
+  document.getElementById('tabManual').classList.toggle('on',!e);
+}
+function addByEmail(){
+  const email=document.getElementById('ptEmail').value.trim();
+  if(!email){showMsg('emailMsg','Enter an email.',false);return;}
+  const r=Storage.linkPatientByEmail(CID,email);
+  if(!r.ok){showMsg('emailMsg',r.msg,false);return;}
+  document.getElementById('ptEmail').value='';
+  showMsg('emailMsg','✅ '+r.patient.name+' linked!',true);
+  renderPatients(); fillDropdowns(); toast('👤 Patient linked!');
+}
+function addManual(){
+  const name=document.getElementById('pmName').value.trim(), age=document.getElementById('pmAge').value.trim();
+  if(!name){showMsg('manualMsg','Name required.',false);return;} if(!age){showMsg('manualMsg','Age required.',false);return;}
+  Storage.addManualPatient(CID,name,age,document.getElementById('pmCondition').value.trim(),document.getElementById('pmContact').value.trim(),document.getElementById('pmNotes').value.trim());
+  ['pmName','pmAge','pmCondition','pmContact','pmNotes'].forEach(id=>document.getElementById(id).value='');
+  showMsg('manualMsg','✅ Patient added!',true); renderPatients(); fillDropdowns(); toast('👤 Patient added!');
+}
+
+/* ── Render patients ── */
+function renderPatients(){
+  const pts=myPatients(); const el=document.getElementById('ptList');
+  document.getElementById('ptCount').textContent=pts.length+' patient'+(pts.length!==1?'s':'');
+  if(!pts.length){el.innerHTML='<p style="color:#94a3b8;font-size:.85rem">No patients yet.</p>';return;}
+  // 2-col on desktop
+  el.style.gridTemplateColumns = window.innerWidth>=768 ? '1fr 1fr' : '1fr';
+  el.innerHTML=pts.map(p=>{
+    const sos=Storage.getSOS(p.id);
+    return '<div class="pcard">'
+      +'<div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:8px">'
+        +'<div style="display:flex;gap:8px;align-items:center"><span style="font-size:1.3rem">👤</span>'
+        +'<div><p style="margin:0;font-weight:700;font-size:.875rem;color:#1e293b">'+esc(p.name)+(sos?'<span class="sos-dot" title="SOS recorded"></span>':'')+'</p>'
+        +'<p style="margin:0;font-size:.72rem;color:#64748b">'+(p.age?p.age+' yrs':''  )+(p.condition?' · '+esc(p.condition):'')+' </p></div></div>'
+        +'<button onclick="confirmDelete(\''+p.id+'\',\''+esc(p.name)+'\')" style="background:none;border:none;color:#fca5a5;cursor:pointer;font-size:1.2rem;line-height:1;padding:0">×</button>'
+      +'</div>'
+      +(p.contact?'<p style="font-size:.72rem;color:#94a3b8;margin:0 0 6px">📞 '+esc(p.contact)+'</p>':'')
+      +'<span class="badge" style="background:'+(p.userId?'#d1fae5':'#f1f5f9')+';color:'+(p.userId?'#065f46':'#64748b')+'">'+(p.userId?'🔗 Linked':'📝 Manual')+'</span>'
+      +'<div style="display:flex;flex-wrap:wrap;gap:10px;margin-top:10px">'
+        +'<button onclick="openModal(\''+p.id+'\')" style="background:none;border:none;font-size:.78rem;font-weight:700;color:#1d4ed8;cursor:pointer;padding:0;font-family:inherit">View Details →</button>'
+        +'<button onclick="quickAssign(\''+p.id+'\')" style="background:none;border:none;font-size:.78rem;font-weight:700;color:#0f766e;cursor:pointer;padding:0;font-family:inherit">💊 Assign Med</button>'
+        +(p.userId?'<button onclick="quickMessage(\''+p.id+'\')" style="background:none;border:none;font-size:.78rem;font-weight:700;color:#7c3aed;cursor:pointer;padding:0;font-family:inherit">📩 Message</button>':'')
+      +'</div>'
+      +'</div>';
+  }).join('');
+}
+window.addEventListener('resize', ()=>{ const el=document.getElementById('ptList'); if(el&&el.children.length>1) el.style.gridTemplateColumns=window.innerWidth>=768?'1fr 1fr':'1fr'; });
+
+function confirmDelete(pid,name){
+  if(!confirm('Remove "'+name+'"?\n\nAll their data will be permanently deleted.'))return;
+  Storage.deletePatient(pid); renderPatients(); fillDropdowns(); toast('"'+name+'" removed.');
+}
+
+/* ── Patient modal ── */
+function openModal(pid){
+  const p=myPatients().find(x=>x.id===pid); if(!p)return;
+  document.getElementById('modalTitle').textContent=p.name+'\'s Details';
+  document.getElementById('ptModal').classList.add('open');
+  const meds=Storage.medicinesFor(pid), appts=Storage.appointmentsFor(pid).filter(a=>new Date(a.date+'T'+a.time)>=new Date()), reps=Storage.reportsFor(pid), sos=Storage.getSOS(pid);
+  document.getElementById('modalBody').innerHTML =
+    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">'
+      +'<div style="background:#eff6ff;border-radius:10px;padding:12px"><p style="margin:0 0 6px;font-size:.68rem;font-weight:700;color:#1d4ed8;text-transform:uppercase">Info</p>'
+        +'<p style="margin:0;font-size:.82rem"><b>Age:</b> '+esc(p.age||'—')+'</p>'
+        +(p.condition?'<p style="margin:2px 0 0;font-size:.82rem"><b>Condition:</b> '+esc(p.condition)+'</p>':'')
+        +(p.contact?'<p style="margin:2px 0 0;font-size:.82rem">📞 '+esc(p.contact)+'</p>':'')
+        +'<p style="margin:4px 0 0;font-size:.7rem;color:#94a3b8">Added '+new Date(p.addedAt).toLocaleDateString()+'</p></div>'
+      +'<div style="background:#fff1f2;border-radius:10px;padding:12px"><p style="margin:0 0 6px;font-size:.68rem;font-weight:700;color:#e11d48;text-transform:uppercase">Last SOS</p>'
+        +(sos?'<p style="margin:0;font-size:.78rem">Lat: '+sos.lat.toFixed(5)+'</p><p style="margin:0;font-size:.78rem">Lng: '+sos.lng.toFixed(5)+'</p><p style="margin:2px 0 0;font-size:.7rem;color:#94a3b8">'+new Date(sos.ts).toLocaleString()+'</p><a href="'+Location.mapsUrl(sos.lat,sos.lng)+'" target="_blank" style="font-size:.75rem;color:#1d4ed8">Open Map →</a>':'<p style="font-size:.78rem;color:#94a3b8">No SOS yet.</p>')
+      +'</div></div>'
+    +'<p style="margin:0 0 6px;font-size:.7rem;font-weight:700;color:#b45309;text-transform:uppercase">Medicines ('+meds.length+')</p>'
+    +(meds.length?meds.map(m=>'<div style="display:flex;align-items:center;justify-content:space-between;background:#fefce8;border-radius:8px;padding:8px 10px;margin-bottom:6px;font-size:.78rem"><span>💊 <b>'+esc(m.name)+'</b> · '+esc(m.dosage)+' · '+m.time+'</span>'+(m.by==='caregiver'?'<button onclick="revokeMed('+m.id+',\''+pid+'\')" style="background:none;border:none;color:#ef4444;cursor:pointer;font-size:.72rem;font-family:inherit;font-weight:700">Revoke</button>':'<span style="color:#94a3b8">patient</span>')+'</div>').join(''):'<p style="font-size:.8rem;color:#94a3b8;margin-bottom:8px">None.</p>')
+    +'<p style="margin:8px 0 6px;font-size:.7rem;font-weight:700;color:#6d28d9;text-transform:uppercase">Upcoming Appointments ('+appts.length+')</p>'
+    +(appts.length?appts.map(a=>'<p style="background:#ede9fe;border-radius:8px;padding:8px 10px;margin-bottom:6px;font-size:.78rem;margin-top:0">📅 '+esc(a.doctor)+' · '+a.date+' '+a.time+'</p>').join(''):'<p style="font-size:.8rem;color:#94a3b8;margin-bottom:8px">None.</p>')
+    +'<p style="margin:8px 0 6px;font-size:.7rem;font-weight:700;color:#15803d;text-transform:uppercase">Reports ('+reps.length+')</p>'
+    +(reps.length?reps.map(r=>'<p style="background:#f0fdf4;border-radius:8px;padding:8px 10px;margin-bottom:6px;font-size:.78rem;margin-top:0">📋 '+esc(r.label)+' · '+new Date(r.uploadedAt).toLocaleDateString()+'</p>').join(''):'<p style="font-size:.8rem;color:#94a3b8">None.</p>');
+}
+function closeModal(){ document.getElementById('ptModal').classList.remove('open'); }
+document.getElementById('ptModal').addEventListener('click',e=>{ if(e.target===document.getElementById('ptModal')) closeModal(); });
+
+/* ── Shortcuts ── */
+function quickAssign(pid){
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.toggle('active',n.dataset.sec==='assign'));
+  document.querySelectorAll('.bnav-item').forEach(b=>b.classList.toggle('active',b.dataset.sec==='assign'));
+  document.querySelectorAll('.sec').forEach(s=>s.classList.remove('on'));
+  document.getElementById('sec-assign').classList.add('on');
+  document.getElementById('pageTitle').textContent='Assign Medicine';
+  closeModal(); fillDropdowns(); setTimeout(()=>{ document.getElementById('asnPt').value=pid; renderAssigned(); },50);
+}
+function quickMessage(pid){
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.toggle('active',n.dataset.sec==='message'));
+  document.querySelectorAll('.bnav-item').forEach(b=>b.classList.toggle('active',b.dataset.sec==='message'));
+  document.querySelectorAll('.sec').forEach(s=>s.classList.remove('on'));
+  document.getElementById('sec-message').classList.add('on');
+  document.getElementById('pageTitle').textContent='Send Message';
+  closeModal(); fillDropdowns(); setTimeout(()=>document.getElementById('msgPt').value=pid,50);
+}
+
+/* ── Assign medicine ── */
+function assignMed(){
+  const pid=document.getElementById('asnPt').value, name=document.getElementById('asnName').value.trim(),
+        dose=document.getElementById('asnDose').value.trim(), time=document.getElementById('asnTime').value,
+        notes=document.getElementById('asnNotes').value.trim();
+  if(!pid){showMsg('asnMsg','Select patient.',false);return;} if(!name){showMsg('asnMsg','Enter medicine name.',false);return;}
+  if(!dose){showMsg('asnMsg','Enter dosage.',false);return;} if(!time){showMsg('asnMsg','Set time.',false);return;}
+  const pt=myPatients().find(p=>p.id===pid);
+  Storage.addMedicine(pid,name,dose,time,notes,'caregiver');
+  // notify patient
+  if(pt&&pt.userId) Notif.cg_AssignedMed(pt.userId, U.name, name, dose, time);
+  ['asnName','asnDose','asnTime','asnNotes'].forEach(id=>document.getElementById(id).value='');
+  showMsg('asnMsg','✅ Assigned to '+(pt?pt.name:'patient')+'!',true);
+  renderAssigned(); toast('💊 Medicine assigned — patient notified!');
+}
+function renderAssigned(){
+  const pid=document.getElementById('asnPt')?document.getElementById('asnPt').value:'';
+  const el=document.getElementById('asnList');
+  if(!pid){el.innerHTML='<p style="color:#94a3b8;font-size:.85rem">Select patient above.</p>';return;}
+  const meds=Storage.medicinesFor(pid).filter(m=>m.by==='caregiver');
+  if(!meds.length){el.innerHTML='<p style="color:#94a3b8;font-size:.85rem">None assigned yet.</p>';return;}
+  el.innerHTML=meds.map(m=>'<div style="display:flex;align-items:center;justify-content:space-between;background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;padding:10px 12px;margin-bottom:8px"><div><p style="margin:0;font-weight:700;font-size:.875rem;color:#1e293b">💊 '+esc(m.name)+'</p><p style="margin:2px 0 0;font-size:.75rem;color:#64748b">'+esc(m.dosage)+' · '+m.time+(m.notes?' · '+esc(m.notes):'')+' </p></div><button onclick="revokeMed('+m.id+',\''+pid+'\')" style="background:none;border:none;font-size:.75rem;font-weight:700;color:#ef4444;cursor:pointer;font-family:inherit">Revoke</button></div>').join('');
+}
+function revokeMed(id,pid){ if(!confirm('Revoke this medicine?'))return; Storage.deleteMedicine(id); renderAssigned(); if(document.getElementById('ptModal').classList.contains('open'))openModal(pid); toast('Medicine revoked.'); }
+
+/* ── Fill dropdowns ── */
+function fillDropdowns(){
+  const pts=myPatients();
+  ['asnPt','apptFilter','repFilter','locFilter','histFilter','msgPt'].forEach(id=>{
+    const el=document.getElementById(id); if(!el)return;
+    const prev=el.value, dflt=(id==='asnPt'||id==='msgPt')?'— Select patient —':'— All patients —';
+    el.innerHTML='<option value="">'+dflt+'</option>'+pts.map(p=>'<option value="'+p.id+'"'+(prev===p.id?' selected':'')+'>'+esc(p.name)+'</option>').join('');
+  });
+}
+
+/* ── Send message ── */
+const SENT_KEY='hg_cgsent_'+CID;
+function sendMessage(){
+  const pid=document.getElementById('msgPt').value, text=document.getElementById('msgText').value.trim();
+  const el=document.getElementById('msgStatus');
+  if(!pid){el.textContent='⚠️ Select patient.';el.style.color='#b91c1c';el.style.display='block';return;}
+  if(!text){el.textContent='⚠️ Type a message.';el.style.color='#b91c1c';el.style.display='block';return;}
+  const pt=myPatients().find(p=>p.id===pid);
+  if(!pt||!pt.userId){el.textContent='⚠️ This patient has no account — cannot receive notifications.';el.style.color='#b91c1c';el.style.display='block';return;}
+  Notif.cg_Message(pt.userId, U.name, text);
+  const sent=JSON.parse(localStorage.getItem(SENT_KEY)||'[]');
+  sent.unshift({pid,ptName:pt.name,msg:text,ts:new Date().toISOString()});
+  localStorage.setItem(SENT_KEY,JSON.stringify(sent.slice(0,50)));
+  document.getElementById('msgText').value='';
+  el.textContent='✅ Sent to '+pt.name+'!'; el.style.color='#166534'; el.style.display='block';
+  setTimeout(()=>el.style.display='none',3000); renderSentMessages(); toast('📩 Message sent!');
+}
+function renderSentMessages(){
+  const sent=JSON.parse(localStorage.getItem(SENT_KEY)||'[]'); const el=document.getElementById('sentList');
+  if(!sent.length){el.innerHTML='<p style="color:#94a3b8;font-size:.85rem">None yet.</p>';return;}
+  el.innerHTML=sent.slice(0,8).map(s=>'<div style="background:#f5f3ff;border:1px solid #ddd6fe;border-radius:10px;padding:10px 12px;margin-bottom:8px"><div style="display:flex;justify-content:space-between;margin-bottom:4px"><span style="font-weight:700;font-size:.82rem;color:#1e293b">👤 '+esc(s.ptName)+'</span><span style="font-size:.7rem;color:#94a3b8">'+new Date(s.ts).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})+'</span></div><p style="margin:0;font-size:.78rem;color:#374151">'+esc(s.msg)+'</p></div>').join('');
+}
+
+/* ── Appointments ── */
+function renderCgAppts(){
+  const filter=document.getElementById('apptFilter').value, pts=myPatients(), el=document.getElementById('cgApptList'), now=new Date();
+  let rows=[]; pts.forEach(p=>{ if(filter&&p.id!==filter)return; Storage.appointmentsFor(p.id).forEach(a=>rows.push({...a,ptName:p.name})); });
+  rows.sort((a,b)=>new Date(a.date+'T'+a.time)-new Date(b.date+'T'+b.time));
+  if(!rows.length){el.innerHTML='<p style="color:#94a3b8;font-size:.85rem">No appointments.</p>';return;}
+  el.innerHTML=rows.map(a=>{const past=new Date(a.date+'T'+a.time)<now; return '<div style="display:flex;align-items:center;justify-content:space-between;background:'+(past?'#f8fafc':'#f5f3ff')+';border:1px solid '+(past?'#e2e8f0':'#ddd6fe')+';border-radius:10px;padding:10px 12px;margin-bottom:8px;opacity:'+(past?.7:1)+'"><div><p style="margin:0;font-weight:700;font-size:.875rem;color:#1e293b">📅 '+esc(a.doctor)+'</p><p style="margin:2px 0 0;font-size:.72rem;color:#64748b">'+a.date+' · '+a.time+(a.notes?' · '+esc(a.notes):'')+' </p><span class="badge" style="margin-top:4px;background:#dbeafe;color:#1d4ed8">👤 '+esc(a.ptName)+'</span></div><span class="badge" style="background:'+(past?'#f1f5f9':'#ede9fe')+';color:'+(past?'#94a3b8':'#7c3aed')+';flex-shrink:0">'+(past?'Past':'Upcoming')+'</span></div>';}).join('');
+}
+
+/* ── Reports ── */
+function renderCgReports(){
+  const filter=document.getElementById('repFilter').value, pts=myPatients(), el=document.getElementById('cgRepList');
+  let rows=[]; pts.forEach(p=>{ if(filter&&p.id!==filter)return; Storage.reportsFor(p.id).forEach(r=>rows.push({...r,ptName:p.name})); });
+  if(!rows.length){el.innerHTML='<p style="color:#94a3b8;font-size:.85rem">No reports.</p>';return;}
+  el.innerHTML='<div style="display:grid;gap:10px'+(window.innerWidth>=768?';grid-template-columns:1fr 1fr':'')+'">'
+    +rows.map(r=>'<div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;padding:10px 12px"><p style="margin:0;font-weight:700;font-size:.875rem;color:#1e293b">📋 '+esc(r.label)+'</p><p style="margin:2px 0 0;font-size:.72rem;color:#64748b">'+esc(r.fileName)+' · '+(r.size/1024).toFixed(1)+' KB</p><p style="margin:2px 0 0;font-size:.7rem;color:#94a3b8">'+new Date(r.uploadedAt).toLocaleDateString()+'</p><span class="badge" style="margin-top:4px;background:#dbeafe;color:#1d4ed8">👤 '+esc(r.ptName)+'</span></div>').join('')+'</div>';
+}
+
+/* ── Location ── */
+function renderCgLoc(){
+  const pid=document.getElementById('locFilter').value, el=document.getElementById('cgLocInfo');
+  if(!pid){el.innerHTML='<p style="color:#94a3b8;font-size:.85rem">Select patient above.</p>';return;}
+  const sos=Storage.getSOS(pid);
+  if(!sos){el.innerHTML='<p style="color:#94a3b8;font-size:.85rem">No SOS location yet.</p>';return;}
+  el.innerHTML='<div style="background:#fff1f2;border:1px solid #fecdd3;border-radius:12px;padding:14px"><p style="margin:0 0 8px;font-weight:700;color:#e11d48;font-size:.875rem">🚨 Last SOS Location</p><p style="margin:0;font-size:.82rem">📍 <b>Lat:</b> '+sos.lat.toFixed(6)+'</p><p style="margin:2px 0 0;font-size:.82rem">📍 <b>Lng:</b> '+sos.lng.toFixed(6)+'</p><p style="margin:4px 0 0;font-size:.72rem;color:#94a3b8">'+new Date(sos.ts).toLocaleString()+'</p><a href="'+Location.mapsUrl(sos.lat,sos.lng)+'" target="_blank" style="display:inline-block;margin-top:8px;color:#1d4ed8;font-size:.8rem;font-weight:600">📌 Open in Google Maps →</a></div>';
+}
+async function getMyLoc(){
+  const el=document.getElementById('myLoc'); el.textContent='Fetching…';
+  try{ const c=await Location.get(); el.innerHTML='📍 Lat: '+c.lat.toFixed(6)+' · Lng: '+c.lng.toFixed(6)+' · ±'+Math.round(c.accuracy)+'m<br><a href="'+Location.mapsUrl(c.lat,c.lng)+'" target="_blank" style="color:#1d4ed8;font-size:.75rem">Open Map</a>'; }
+  catch(e){ el.textContent='⚠️ '+e; }
+}
+
+/* ── History ── */
+const H_BG={water:'#e0f2fe',medicine:'#fef9c3',appointment:'#ede9fe',sos:'#fff1f2',report:'#f0fdf4',message:'#dcfce7'};
+function renderCgHist(){
+  const pid=document.getElementById('histFilter').value, el=document.getElementById('cgHistList');
+  if(!pid){el.innerHTML='<p style="color:#94a3b8;font-size:.85rem">Select patient above.</p>';return;}
+  const h=Storage.getHistory(pid);
+  if(!h.length){el.innerHTML='<p style="color:#94a3b8;font-size:.85rem">No activity yet.</p>';return;}
+  el.innerHTML=h.map(e=>'<div style="display:flex;gap:10px;align-items:flex-start;padding:8px 0;border-bottom:1px solid #f8fafc"><div style="width:10px;height:10px;border-radius:50%;background:'+(H_BG[e.type]||'#f1f5f9')+';flex-shrink:0;margin-top:4px;border:2px solid rgba(0,0,0,.1)"></div><div><p style="margin:0;font-size:.82rem;color:#1e293b">'+esc(e.msg)+'</p><p style="margin:0;font-size:.7rem;color:#94a3b8">'+new Date(e.ts).toLocaleString()+'</p></div></div>').join('');
+}
+
+/* ── Logout ── */
+function doLogout(){ Notif.stopApptCheck(); Storage.logout(); location.href='index.html'; }
+
+/* ── Init ── */
+renderPatients(); fillDropdowns();
+</script>
+</body>
+</html>
