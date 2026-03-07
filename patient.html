@@ -1,0 +1,517 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+  <meta name="theme-color" content="#0f766e"/>
+  <meta name="mobile-web-app-capable" content="yes"/>
+  <meta name="apple-mobile-web-app-capable" content="yes"/>
+  <meta name="apple-mobile-web-app-status-bar-style" content="default"/>
+  <title>HealthGuard – Patient</title>
+  <link rel="stylesheet" href="app.css"/>
+  <style>
+    *,*::before,*::after{box-sizing:border-box}
+    html,body{margin:0;padding:0;height:100%;background:#f0fdfa;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;overflow:hidden}
+    #app{display:flex;flex-direction:column;height:100vh;height:100dvh}
+
+    /* ── TOPBAR ── */
+    #topbar{background:#0f766e;color:#fff;padding:0 16px;height:58px;display:flex;align-items:center;gap:12px;flex-shrink:0;box-shadow:0 2px 12px rgba(0,0,0,.18);position:relative;z-index:30}
+    #menuBtn{background:none;border:none;cursor:pointer;color:#fff;padding:6px;border-radius:8px;display:flex;align-items:center;-webkit-tap-highlight-color:transparent}
+    #menuBtn:active{background:rgba(255,255,255,.15)}
+    .topbar-logo{display:flex;align-items:center;gap:7px;flex:1}
+    .topbar-logo svg{flex-shrink:0}
+    .topbar-title{font-family:Georgia,serif;font-size:1.15rem;font-weight:700;color:#fff}
+    .topbar-right{display:flex;align-items:center;gap:6px}
+    .role-chip{background:rgba(255,255,255,.2);color:#fff;border-radius:99px;font-size:.65rem;font-weight:700;padding:3px 9px}
+
+    /* ── PERM BANNER ── */
+    #permBanner{background:linear-gradient(90deg,#0891b2,#0f766e);color:#fff;padding:9px 16px;display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;font-size:.78rem;flex-shrink:0}
+    #permBanner.gone{display:none}
+
+    /* ── DRAWER OVERLAY ── */
+    #drawerOverlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:100;backdrop-filter:blur(2px)}
+    #drawerOverlay.on{display:block}
+
+    /* ── DRAWER ── */
+    #drawer{position:fixed;top:0;left:0;bottom:0;width:280px;background:#fff;z-index:101;transform:translateX(-100%);transition:transform .28s cubic-bezier(.4,0,.2,1);display:flex;flex-direction:column;box-shadow:4px 0 32px rgba(0,0,0,.18)}
+    #drawer.open{transform:translateX(0)}
+    .drawer-head{background:linear-gradient(135deg,#0f766e,#0891b2);padding:28px 20px 20px;flex-shrink:0}
+    .drawer-avatar{width:52px;height:52px;border-radius:50%;background:rgba(255,255,255,.25);display:flex;align-items:center;justify-content:center;font-size:1.5rem;margin-bottom:10px}
+    .drawer-name{font-weight:700;color:#fff;font-size:.95rem;margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .drawer-email{font-size:.72rem;color:rgba(255,255,255,.75);margin:2px 0 0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .drawer-role{display:inline-block;background:rgba(255,255,255,.2);color:#fff;font-size:.62rem;font-weight:700;border-radius:99px;padding:2px 8px;margin-top:6px}
+    .drawer-nav{flex:1;overflow-y:auto;padding:10px 8px}
+    .nav-item{display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:12px;cursor:pointer;color:#64748b;font-size:.88rem;font-weight:500;transition:all .15s;margin-bottom:2px;-webkit-tap-highlight-color:transparent}
+    .nav-item:active{transform:scale(.97)}
+    .nav-item .ni-icon{width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:1.1rem;background:#f1f5f9;flex-shrink:0;transition:background .15s}
+    .nav-item.active{color:#0f766e;background:#f0fdfa}
+    .nav-item.active .ni-icon{background:#ccfbf1}
+    .nav-item:not(.active):hover{background:#f8fafc}
+    .drawer-foot{padding:10px 8px 20px;border-top:1px solid #f1f5f9;flex-shrink:0}
+    .nav-logout{color:#ef4444}
+    .nav-logout .ni-icon{background:#fff1f2}
+
+    /* ── PAGE CONTENT ── */
+    #pageContent{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:16px;padding-bottom:24px}
+
+    /* ── CARDS ── */
+    .card{background:#fff;border-radius:14px;box-shadow:0 1px 8px rgba(0,0,0,.07);padding:16px;margin-bottom:14px}
+    .card-title{margin:0 0 12px;font-size:.95rem;font-weight:700;color:#1e293b}
+
+    /* ── SECTION HEADER ── */
+    .sec-header{display:flex;align-items:center;gap:10px;margin-bottom:16px;padding-bottom:12px;border-bottom:2px solid #f0fdfa}
+    .sec-header-icon{width:42px;height:42px;border-radius:12px;background:#ccfbf1;display:flex;align-items:center;justify-content:center;font-size:1.3rem;flex-shrink:0}
+    .sec-header-title{font-size:1.1rem;font-weight:700;color:#134e4a;margin:0}
+    .sec-header-sub{font-size:.75rem;color:#94a3b8;margin:2px 0 0}
+
+    /* ── INPUTS ── */
+    .inp{display:block;width:100%;border:1.5px solid #e2e8f0;border-radius:10px;padding:11px 13px;font-size:16px;outline:none;font-family:inherit;background:#fafafa;transition:border-color .2s}
+    .inp:focus{border-color:#0f766e;background:#fff}
+    select.inp{background:#fff}
+    textarea.inp{resize:vertical;min-height:80px}
+    .inp-group{display:flex;flex-direction:column;gap:10px}
+
+    /* ── BUTTONS ── */
+    .btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;background:#0f766e;color:#fff;border:none;border-radius:10px;padding:12px 18px;font-size:.875rem;font-weight:600;cursor:pointer;font-family:inherit;transition:background .2s,transform .1s;-webkit-tap-highlight-color:transparent;width:100%}
+    .btn:active{transform:scale(.97)}
+    .btn-gray{background:#64748b}
+    .btn-red{background:#ef4444}
+    .btn-purple{background:#7c3aed}
+
+    /* ── SECTIONS ── */
+    .sec{display:none!important}
+    .sec.on{display:block!important}
+
+    /* ── BADGE ── */
+    .badge{display:inline-block;border-radius:999px;font-size:.68rem;font-weight:700;padding:2px 8px}
+
+    /* ── TOAST ── */
+    #toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#1e293b;color:#fff;padding:10px 20px;border-radius:99px;font-size:.83rem;font-weight:500;opacity:0;pointer-events:none;transition:opacity .3s;z-index:500;max-width:calc(100vw - 32px);text-align:center;white-space:nowrap}
+    #toast.show{opacity:1}
+    .sos-wrap{position:relative;width:150px;height:150px;display:flex;align-items:center;justify-content:center}
+    .sos-ring{position:absolute;inset:0;border-radius:50%;background:rgba(239,68,68,.18);animation:sosPulse 2s infinite}
+    @keyframes sosPulse{0%{transform:scale(1);opacity:.8}70%{transform:scale(1.5);opacity:0}100%{transform:scale(1.5);opacity:0}}
+    .sos-btn{width:126px;height:126px;border-radius:50%;background:linear-gradient(135deg,#f43f5e,#dc2626);color:#fff;font-size:1.1rem;font-weight:900;border:none;cursor:pointer;font-family:inherit;position:relative;z-index:1;transition:transform .15s;box-shadow:0 6px 24px rgba(220,38,38,.4);-webkit-tap-highlight-color:transparent}
+    .sos-btn:active{transform:scale(.93)}
+
+    /* ── WATER RING ── */
+    .w-ring{width:100px;height:100px;border-radius:50%;border:5px solid #bae6fd;display:flex;align-items:center;justify-content:center;font-size:2.2rem;transition:border-color .3s}
+    .w-ring.on{border-color:#0ea5e9;animation:wPulse 2s infinite}
+    @keyframes wPulse{0%,100%{box-shadow:0 0 0 0 rgba(14,165,233,.3)}50%{box-shadow:0 0 0 14px rgba(14,165,233,0)}}
+
+    /* ── MED COLORS ── */
+    .med-cg{border-left:3px solid #1d4ed8}
+    .med-pt{border-left:3px solid #0f766e}
+
+    /* ── STAT GRID ── */
+    .stat-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px}
+    .stat-card{background:#fff;border-radius:14px;box-shadow:0 1px 8px rgba(0,0,0,.07);padding:14px 10px;text-align:center}
+    .stat-icon{font-size:1.7rem}
+    .stat-val{font-size:1.6rem;font-weight:700;color:#0f766e;margin:4px 0 0;line-height:1}
+    .stat-label{font-size:.68rem;color:#94a3b8;margin:3px 0 0}
+
+    /* ── 2-col grid on wider screens ── */
+    @media(min-width:640px){.md-grid-2{display:grid!important;grid-template-columns:1fr 1fr;gap:14px}}
+  </style>
+</head>
+<body>
+<div id="app">
+
+  <!-- DRAWER OVERLAY -->
+  <div id="drawerOverlay" onclick="closeDrawer()"></div>
+
+  <!-- DRAWER -->
+  <div id="drawer">
+    <div class="drawer-head">
+      <div class="drawer-avatar">🧑‍⚕️</div>
+      <p id="drName" class="drawer-name">—</p>
+      <p id="drEmail" class="drawer-email">—</p>
+      <span class="drawer-role">Patient</span>
+    </div>
+    <div class="drawer-nav">
+      <div class="nav-item active" data-sec="overview"     onclick="nav(this,'Overview')">          <div class="ni-icon">📊</div><span>Overview</span></div>
+      <div class="nav-item"        data-sec="water"        onclick="nav(this,'Water Reminder')">     <div class="ni-icon">💧</div><span>Water Reminder</span></div>
+      <div class="nav-item"        data-sec="medicine"     onclick="nav(this,'Medicines')">          <div class="ni-icon">💊</div><span>Medicines</span></div>
+      <div class="nav-item"        data-sec="appointments" onclick="nav(this,'Appointments')">       <div class="ni-icon">📅</div><span>Appointments</span></div>
+      <div class="nav-item"        data-sec="sos"          onclick="nav(this,'SOS Emergency')">      <div class="ni-icon">🆘</div><span>SOS Emergency</span></div>
+      <div class="nav-item"        data-sec="reports"      onclick="nav(this,'Health Reports')">     <div class="ni-icon">📋</div><span>Health Reports</span></div>
+      <div class="nav-item"        data-sec="message"      onclick="nav(this,'Message Caregiver')">  <div class="ni-icon">💬</div><span>Message Caregiver</span></div>
+      <div class="nav-item"        data-sec="history"      onclick="nav(this,'Activity Log')">       <div class="ni-icon">🕐</div><span>Activity Log</span></div>
+    </div>
+    <div class="drawer-foot">
+      <div class="nav-item nav-logout" onclick="doLogout()"><div class="ni-icon">🚪</div><span>Sign Out</span></div>
+    </div>
+  </div>
+
+  <!-- TOPBAR -->
+  <div id="topbar">
+    <button id="menuBtn" onclick="openDrawer()">
+      <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16"/></svg>
+    </button>
+    <div class="topbar-logo">
+      <svg width="22" height="22" fill="none" stroke="#fff" stroke-width="2.2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/></svg>
+      <span class="topbar-title">HealthGuard</span>
+    </div>
+    <div class="topbar-right">
+      <span class="role-chip">Patient</span>
+      <div id="bellSlot"></div>
+    </div>
+  </div>
+
+  <!-- NOTIF PERMISSION BANNER -->
+  <div id="permBanner">
+    <span>🔔 Enable notifications &amp; sound alerts</span>
+    <div style="display:flex;gap:8px;flex-shrink:0">
+      <button onclick="enableNotifs()" style="background:#fff;color:#0f766e;border:none;border-radius:8px;padding:5px 12px;font-weight:700;font-size:.78rem;cursor:pointer;font-family:inherit">Enable</button>
+      <button onclick="document.getElementById('permBanner').classList.add('gone')" style="background:rgba(255,255,255,.2);color:#fff;border:none;border-radius:8px;padding:5px 10px;font-size:.78rem;cursor:pointer">✕</button>
+    </div>
+  </div>
+
+  <!-- PAGE CONTENT -->
+  <div id="pageContent">
+
+    <!-- ══ OVERVIEW ══ -->
+    <div id="sec-overview" class="sec on">
+      <div id="cgBanner" style="display:none;background:#eff6ff;border:1px solid #bfdbfe;border-radius:14px;padding:14px;margin-bottom:14px">
+        <p style="font-size:.85rem;color:#1d4ed8;margin:0">👩‍⚕️ Linked to caregiver: <strong id="cgName"></strong></p>
+      </div>
+      <div class="stat-grid">
+        <div class="stat-card"><div class="stat-icon">💊</div><div id="stMeds" class="stat-val">0</div><div class="stat-label">Medicines</div></div>
+        <div class="stat-card"><div class="stat-icon">📅</div><div id="stAppts" class="stat-val">0</div><div class="stat-label">Appointments</div></div>
+        <div class="stat-card"><div class="stat-icon">📋</div><div id="stRep" class="stat-val">0</div><div class="stat-label">Reports</div></div>
+        <div class="stat-card"><div class="stat-icon">💧</div><div id="stWater" class="stat-val">—</div><div class="stat-label">Water</div></div>
+      </div>
+      <div class="card" style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">
+        <div><p style="margin:0;font-weight:700;font-size:.9rem;color:#1e293b">🆘 SOS Emergency</p><p style="margin:2px 0 0;font-size:.75rem;color:#94a3b8">Tap to alert caregiver instantly</p></div>
+        <button onclick="triggerSOS()" style="width:54px;height:54px;border-radius:12px;background:linear-gradient(135deg,#f43f5e,#dc2626);color:#fff;border:none;font-size:.7rem;font-weight:900;cursor:pointer;font-family:inherit;flex-shrink:0;box-shadow:0 4px 14px rgba(220,38,38,.35)">🆘<br>SOS</button>
+      </div>
+      <div class="card">
+        <p style="margin:0 0 10px;font-weight:700;font-size:.875rem;color:#1e293b">📅 Upcoming Appointments</p>
+        <div id="ovAppts" style="font-size:.85rem;color:#94a3b8">None yet.</div>
+      </div>
+    </div>
+
+    <!-- ══ WATER ══ -->
+    <div id="sec-water" class="sec">
+      <div class="sec-header"><div class="sec-header-icon">💧</div><div><p class="sec-header-title">Water Reminder</p><p class="sec-header-sub">Stay hydrated — your caregiver gets notified too</p></div></div>
+      <div class="card" style="text-align:center">
+        <div style="display:flex;justify-content:center;margin-bottom:20px"><div class="w-ring" id="wRing">💧</div></div>
+        <label style="font-size:.8rem;font-weight:600;color:#64748b;display:block;margin-bottom:8px;text-align:left">Remind every:</label>
+        <select id="wSelect" class="inp" style="margin-bottom:14px">
+          <option value="15">15 minutes</option>
+          <option value="30" selected>30 minutes</option>
+          <option value="45">45 minutes</option>
+          <option value="60">1 hour</option>
+          <option value="90">1.5 hours</option>
+          <option value="120">2 hours</option>
+        </select>
+        <button id="wBtn" class="btn" onclick="toggleWater()">▶ Start Reminder</button>
+        <p id="wStatus" style="text-align:center;font-size:.75rem;color:#0f766e;margin-top:10px;font-weight:600"></p>
+      </div>
+    </div>
+
+    <!-- ══ MEDICINE ══ -->
+    <div id="sec-medicine" class="sec">
+      <div class="sec-header"><div class="sec-header-icon">💊</div><div><p class="sec-header-title">Medicines</p><p class="sec-header-sub">Caregiver notified when you add</p></div></div>
+      <div class="card">
+        <p class="card-title">Add Medicine</p>
+        <div class="inp-group">
+          <input id="mName"  class="inp" placeholder="Medicine name *"/>
+          <input id="mDose"  class="inp" placeholder="Dosage (e.g. 500 mg) *"/>
+          <input id="mTime"  class="inp" type="time"/>
+          <input id="mNotes" class="inp" placeholder="Notes (optional)"/>
+          <button class="btn" onclick="addMedicine()">+ Add Medicine</button>
+        </div>
+      </div>
+      <div class="card">
+        <p style="margin:0 0 6px;font-weight:700;font-size:.9rem;color:#1e293b">Your Medicines</p>
+        <p style="margin:0 0 10px;font-size:.72rem;color:#94a3b8"><span style="display:inline-block;width:10px;height:10px;background:#1d4ed8;border-radius:3px;margin-right:4px"></span>By caregiver &nbsp;<span style="display:inline-block;width:10px;height:10px;background:#0f766e;border-radius:3px;margin-right:4px"></span>By you</p>
+        <div id="medList"><p style="color:#94a3b8;font-size:.85rem">No medicines yet.</p></div>
+      </div>
+    </div>
+
+    <!-- ══ APPOINTMENTS ══ -->
+    <div id="sec-appointments" class="sec">
+      <div class="sec-header"><div class="sec-header-icon">📅</div><div><p class="sec-header-title">Appointments</p><p class="sec-header-sub">Caregiver notified automatically</p></div></div>
+      <div class="card">
+        <p class="card-title">New Appointment</p>
+        <div class="inp-group">
+          <input id="aDoc"   class="inp" placeholder="Doctor / Clinic *"/>
+          <input id="aDate"  class="inp" type="date"/>
+          <input id="aTime"  class="inp" type="time"/>
+          <input id="aNotes" class="inp" placeholder="Notes (optional)"/>
+          <button class="btn" onclick="addAppointment()">+ Add Appointment</button>
+        </div>
+      </div>
+      <div class="card">
+        <p class="card-title">All Appointments</p>
+        <div id="apptList"><p style="color:#94a3b8;font-size:.85rem">No appointments yet.</p></div>
+      </div>
+    </div>
+
+    <!-- ══ SOS ══ -->
+    <div id="sec-sos" class="sec">
+      <div class="sec-header"><div class="sec-header-icon">🆘</div><div><p class="sec-header-title">SOS Emergency</p><p class="sec-header-sub">Alarm sounds on caregiver's device</p></div></div>
+      <div class="card" style="text-align:center;padding:28px 16px">
+        <p style="margin:0 0 6px;font-size:.85rem;color:#64748b">Hold tight — tap the button to send your GPS location and trigger a loud alarm on your caregiver's screen.</p>
+        <div style="display:flex;justify-content:center;margin:28px 0">
+          <div class="sos-wrap"><div class="sos-ring"></div><button class="sos-btn" onclick="triggerSOS()">SOS</button></div>
+        </div>
+        <div id="sosBox" style="display:none;text-align:left;background:#fff1f2;border:1px solid #fecdd3;border-radius:12px;padding:14px;margin-bottom:10px">
+          <p style="margin:0 0 8px;font-weight:700;color:#e11d48;font-size:.875rem">🚨 Alert Sent!</p>
+          <div id="sosInfo" style="font-size:.78rem;color:#64748b;line-height:1.8"></div>
+        </div>
+        <p id="sosLast" style="font-size:.72rem;color:#94a3b8"></p>
+      </div>
+    </div>
+
+    <!-- ══ REPORTS ══ -->
+    <div id="sec-reports" class="sec">
+      <div class="sec-header"><div class="sec-header-icon">📋</div><div><p class="sec-header-title">Health Reports</p><p class="sec-header-sub">Upload and store your reports</p></div></div>
+      <div class="card">
+        <p class="card-title">Upload Report</p>
+        <div id="dropZ" onclick="document.getElementById('rFile').click()" style="border:2px dashed #e2e8f0;border-radius:12px;padding:28px;text-align:center;cursor:pointer;margin-bottom:10px;transition:border-color .2s">
+          <div style="font-size:2.2rem;margin-bottom:4px">📁</div>
+          <p style="margin:0;font-size:.8rem;color:#94a3b8">Tap to select file</p>
+          <input type="file" id="rFile" accept=".pdf,image/*" style="display:none" onchange="fileChosen(this)"/>
+        </div>
+        <p id="rPreview" style="font-size:.75rem;color:#0f766e;margin-bottom:8px"></p>
+        <input id="rLabel" class="inp" placeholder="Report label *" style="margin-bottom:10px"/>
+        <button class="btn" onclick="uploadReport()">Upload Report</button>
+      </div>
+      <div class="card">
+        <p class="card-title">Uploaded Reports</p>
+        <div id="repList"><p style="color:#94a3b8;font-size:.85rem">No reports yet.</p></div>
+      </div>
+    </div>
+
+    <!-- ══ MESSAGE CAREGIVER ══ -->
+    <div id="sec-message" class="sec">
+      <div class="sec-header"><div class="sec-header-icon">💬</div><div><p class="sec-header-title">Message Caregiver</p><p class="sec-header-sub">Instant pop-up + sound on their device</p></div></div>
+      <div class="card">
+        <div id="noCgMsg" style="background:#fef9c3;border:1px solid #fde047;border-radius:10px;padding:12px;font-size:.8rem;color:#92400e;display:none;margin-bottom:12px">⚠️ You are not linked to a caregiver yet.</div>
+        <div id="cgMsgForm">
+          <textarea id="ptMsgText" class="inp" rows="4" placeholder="Type your message here…" style="margin-bottom:10px"></textarea>
+          <button class="btn btn-purple" onclick="sendMsgToCg()">💬 Send Message</button>
+          <p id="ptMsgStatus" style="text-align:center;font-size:.8rem;margin-top:8px;display:none"></p>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ HISTORY ══ -->
+    <div id="sec-history" class="sec">
+      <div class="sec-header"><div class="sec-header-icon">🕐</div><div><p class="sec-header-title">Activity Log</p><p class="sec-header-sub">Everything that happened</p></div></div>
+      <div class="card">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+          <span style="font-weight:700;font-size:.9rem;color:#1e293b">Recent Activity</span>
+          <button onclick="clearHistory()" style="background:none;border:none;font-size:.75rem;color:#ef4444;cursor:pointer;font-family:inherit">Clear all</button>
+        </div>
+        <div id="histList"><p style="color:#94a3b8;font-size:.85rem">No activity yet.</p></div>
+      </div>
+    </div>
+
+  </div><!-- /pageContent -->
+</div><!-- /app -->
+<div id="toast"></div>
+
+<script src="js/storage.js"></script>
+<script src="js/location.js"></script>
+<script src="js/notifications.js"></script>
+<script>
+/* AUTH */
+const U  = Storage.currentUser();
+if (!U || U.role !== 'patient') { location.href='index.html'; throw 0; }
+const PR  = Storage.ensurePatientRecord(U);
+const PID = PR.id;
+
+document.getElementById('drName').textContent  = U.name;
+document.getElementById('drEmail').textContent = U.email;
+
+/* CAREGIVER BANNER */
+if (PR.caregiverId) {
+  const cg = Storage.userById(PR.caregiverId);
+  if (cg) {
+    const b = document.getElementById('cgBanner'); b.style.display='block';
+    document.getElementById('cgName').textContent = cg.name+' ('+cg.email+')';
+  }
+} else {
+  document.getElementById('noCgMsg').style.display='block';
+  document.getElementById('cgMsgForm').style.display='none';
+}
+
+/* NOTIFICATIONS */
+if (window.Notification && Notification.permission==='granted') document.getElementById('permBanner').classList.add('gone');
+function enableNotifs(){ Notif.requestPermission(ok=>{ document.getElementById('permBanner').classList.add('gone'); if(ok) toast('🔔 Notifications enabled!'); }); }
+Notif.injectBell(document.getElementById('bellSlot'), U.id, '#0f766e');
+Notif.startListening(U.id, null);
+
+/* DRAWER */
+function openDrawer()  { document.getElementById('drawer').classList.add('open'); document.getElementById('drawerOverlay').classList.add('on'); }
+function closeDrawer() { document.getElementById('drawer').classList.remove('open'); document.getElementById('drawerOverlay').classList.remove('on'); }
+
+/* SECTION NAV */
+const REFRESH = { overview:renderOverview, medicine:renderMeds, appointments:renderAppts, reports:renderReports, history:renderHistory, sos:renderSosLast, message:setupMsgSection };
+function nav(el, title) {
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  el.classList.add('active');
+  document.querySelectorAll('.sec').forEach(s=>s.classList.remove('on'));
+  document.getElementById('sec-'+el.dataset.sec).classList.add('on');
+  if (REFRESH[el.dataset.sec]) REFRESH[el.dataset.sec]();
+  closeDrawer();
+}
+
+/* TOAST */
+function toast(msg,dur=2800){ const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),dur); }
+function esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function fmtDate(d){ return new Date(d+'T00:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}); }
+
+/* OVERVIEW */
+function renderOverview(){
+  document.getElementById('stMeds').textContent  = Storage.medicinesFor(PID).length;
+  document.getElementById('stAppts').textContent = Storage.appointmentsFor(PID).length;
+  document.getElementById('stRep').textContent   = Storage.reportsFor(PID).length;
+  const wi = Storage.getWaterMins(U.id);
+  document.getElementById('stWater').textContent = wi ? wi+'m' : 'Off';
+  const now=new Date(), appts=Storage.appointmentsFor(PID).filter(a=>new Date(a.date+'T'+a.time)>=now).sort((a,b)=>new Date(a.date+'T'+a.time)-new Date(b.date+'T'+b.time)).slice(0,3);
+  const el=document.getElementById('ovAppts');
+  if(!appts.length){el.innerHTML='<p style="color:#94a3b8;font-size:.85rem">No upcoming appointments.</p>';return;}
+  el.innerHTML=appts.map(a=>'<div style="display:flex;gap:10px;padding:8px 0;border-bottom:1px solid #f1f5f9"><span>📅</span><div><p style="margin:0;font-weight:600;font-size:.85rem;color:#1e293b">'+esc(a.doctor)+'</p><p style="margin:0;font-size:.75rem;color:#94a3b8">'+fmtDate(a.date)+' at '+a.time+'</p></div></div>').join('');
+}
+
+/* WATER */
+let waterRunning=false;
+function toggleWater(){
+  if(!waterRunning){
+    const mins=parseInt(document.getElementById('wSelect').value);
+    Notif.startWater(mins,PID,U.id,PR.caregiverId||null);
+    Storage.setWaterMins(U.id,mins); waterRunning=true;
+    document.getElementById('wBtn').textContent='⏹ Stop Reminder';
+    document.getElementById('wBtn').className='btn btn-gray';
+    document.getElementById('wRing').classList.add('on');
+    document.getElementById('wStatus').textContent='✅ Active — every '+mins+' min';
+    if(PR.caregiverId) Notif.pt_StartedWater(PR.caregiverId,U.name,mins);
+    toast('💧 Water reminder started!');
+  } else {
+    Notif.stopWater(); Storage.setWaterMins(U.id,null); waterRunning=false;
+    document.getElementById('wBtn').textContent='▶ Start Reminder';
+    document.getElementById('wBtn').className='btn';
+    document.getElementById('wRing').classList.remove('on');
+    document.getElementById('wStatus').textContent='';
+    toast('Water reminder stopped.');
+  }
+}
+
+/* MEDICINES */
+function addMedicine(){
+  const name=document.getElementById('mName').value.trim(), dose=document.getElementById('mDose').value.trim(), time=document.getElementById('mTime').value, notes=document.getElementById('mNotes').value.trim();
+  if(!name){toast('⚠️ Enter medicine name');return;} if(!dose){toast('⚠️ Enter dosage');return;} if(!time){toast('⚠️ Set a time');return;}
+  Storage.addMedicine(PID,name,dose,time,notes,'patient');
+  if(PR.caregiverId) Notif.pt_AddedMedicine(PR.caregiverId,U.name,name,dose,time);
+  ['mName','mDose','mTime','mNotes'].forEach(id=>document.getElementById(id).value='');
+  renderMeds(); toast('💊 Medicine added — caregiver notified!');
+}
+function renderMeds(){
+  const meds=Storage.medicinesFor(PID), el=document.getElementById('medList');
+  if(!meds.length){el.innerHTML='<p style="color:#94a3b8;font-size:.85rem">No medicines yet.</p>';return;}
+  el.innerHTML=meds.map(m=>'<div style="display:flex;align-items:center;justify-content:space-between;border-radius:10px;padding:10px 12px;margin-bottom:8px;background:'+(m.by==='caregiver'?'#eff6ff':'#fefce8')+'" class="'+(m.by==='caregiver'?'med-cg':'med-pt')+'">'
+    +'<div><p style="margin:0;font-weight:700;font-size:.875rem;color:#1e293b">💊 '+esc(m.name)+'</p>'
+    +'<p style="margin:2px 0 0;font-size:.75rem;color:#64748b">'+esc(m.dosage)+' · '+m.time+(m.notes?' · '+esc(m.notes):'')+' </p>'
+    +'<span class="badge" style="margin-top:4px;background:'+(m.by==='caregiver'?'#dbeafe':'#ccfbf1')+';color:'+(m.by==='caregiver'?'#1d4ed8':'#0f766e')+'">'+(m.by==='caregiver'?'👩‍⚕️ Caregiver':'👤 You')+'</span></div>'
+    +(m.by!=='caregiver'?'<button onclick="delMed('+m.id+')" style="background:none;border:none;color:#ef4444;font-size:1.4rem;cursor:pointer;padding:0;line-height:1">×</button>':'<span style="font-size:.75rem;color:#93c5fd">🔒</span>')
+    +'</div>').join('');
+}
+function delMed(id){Storage.deleteMedicine(id);renderMeds();toast('Medicine removed.');}
+
+/* APPOINTMENTS */
+function addAppointment(){
+  const doc=document.getElementById('aDoc').value.trim(), date=document.getElementById('aDate').value, time=document.getElementById('aTime').value, notes=document.getElementById('aNotes').value.trim();
+  if(!doc){toast('⚠️ Enter doctor/clinic');return;} if(!date){toast('⚠️ Pick a date');return;} if(!time){toast('⚠️ Set a time');return;}
+  Storage.addAppointment(PID,doc,date,time,notes);
+  if(PR.caregiverId) Notif.pt_AddedAppointment(PR.caregiverId,U.name,doc,date,time);
+  ['aDoc','aDate','aTime','aNotes'].forEach(id=>document.getElementById(id).value='');
+  renderAppts(); toast('📅 Appointment added — caregiver notified!');
+}
+function renderAppts(){
+  const all=Storage.appointmentsFor(PID).sort((a,b)=>new Date(a.date+'T'+a.time)-new Date(b.date+'T'+b.time)), el=document.getElementById('apptList'), now=new Date();
+  if(!all.length){el.innerHTML='<p style="color:#94a3b8;font-size:.85rem">No appointments yet.</p>';return;}
+  el.innerHTML=all.map(a=>{const past=new Date(a.date+'T'+a.time)<now;return'<div style="display:flex;align-items:center;justify-content:space-between;border-radius:10px;padding:10px 12px;margin-bottom:8px;background:'+(past?'#f8fafc':'#f5f3ff')+';opacity:'+(past?.7:1)+'">'
+    +'<div><p style="margin:0;font-weight:700;font-size:.875rem;color:#1e293b">📅 '+esc(a.doctor)+'</p>'
+    +'<p style="margin:2px 0 0;font-size:.75rem;color:#64748b">'+fmtDate(a.date)+' · '+a.time+(a.notes?' · '+esc(a.notes):'')+' </p>'
+    +'<span class="badge" style="margin-top:4px;background:'+(past?'#f1f5f9':'#ede9fe')+';color:'+(past?'#94a3b8':'#7c3aed')+'">'+(past?'Past':'Upcoming')+'</span></div>'
+    +'<button onclick="delAppt('+a.id+')" style="background:none;border:none;color:#ef4444;font-size:1.4rem;cursor:pointer;padding:0;line-height:1;flex-shrink:0">×</button></div>';}).join('');
+}
+function delAppt(id){Storage.deleteAppointment(id);renderAppts();toast('Appointment removed.');}
+
+/* SOS */
+async function triggerSOS(){
+  toast('📍 Getting location…',5000);
+  try{
+    const c=await Location.get();
+    Storage.saveSOS(PID,c.lat,c.lng,c.accuracy);
+    if(PR.caregiverId) Notif.pt_SOS(PR.caregiverId,U.name,c.lat,c.lng);
+    document.getElementById('sosBox').style.display='block';
+    document.getElementById('sosInfo').innerHTML='<p style="margin:0">📍 <b>Lat:</b> '+c.lat.toFixed(6)+'</p><p style="margin:0">📍 <b>Lng:</b> '+c.lng.toFixed(6)+'</p><p style="margin:0">🎯 <b>Accuracy:</b> ±'+Math.round(c.accuracy)+'m</p><a href="'+Location.mapsUrl(c.lat,c.lng)+'" target="_blank" style="color:#0f766e">Open in Google Maps →</a>';
+    Notif.showPopup('sos_alert','🚨 SOS Sent','Caregiver alerted with your GPS location.',0);
+    renderSosLast(); renderOverview(); toast('🚨 SOS alert sent to caregiver!');
+  }catch(err){toast('⚠️ '+err);}
+}
+function renderSosLast(){
+  const s=Storage.getSOS(PID);
+  document.getElementById('sosLast').textContent=s?'Last SOS: '+new Date(s.ts).toLocaleString()+' · '+s.lat.toFixed(4)+', '+s.lng.toFixed(4):'No SOS sent yet.';
+}
+
+/* REPORTS */
+let chosenFile=null;
+function fileChosen(inp){chosenFile=inp.files[0];if(!chosenFile)return;document.getElementById('rPreview').textContent='📎 '+chosenFile.name;if(!document.getElementById('rLabel').value)document.getElementById('rLabel').value=chosenFile.name.replace(/\.[^.]+$/,'');}
+function uploadReport(){
+  const label=document.getElementById('rLabel').value.trim();
+  if(!chosenFile){toast('⚠️ Select a file');return;}if(!label){toast('⚠️ Enter a label');return;}
+  Storage.addReport(PID,label,chosenFile.name,chosenFile.size);
+  chosenFile=null;document.getElementById('rFile').value='';document.getElementById('rLabel').value='';document.getElementById('rPreview').textContent='';
+  renderReports();toast('📋 Report saved!');
+}
+function renderReports(){
+  const all=Storage.reportsFor(PID), el=document.getElementById('repList');
+  if(!all.length){el.innerHTML='<p style="color:#94a3b8;font-size:.85rem">No reports yet.</p>';return;}
+  el.innerHTML=all.map(r=>'<div style="display:flex;align-items:center;justify-content:space-between;background:#f0fdf4;border-radius:10px;padding:10px 12px;margin-bottom:8px"><div><p style="margin:0;font-weight:700;font-size:.875rem;color:#1e293b">📋 '+esc(r.label)+'</p><p style="margin:2px 0 0;font-size:.72rem;color:#64748b">'+esc(r.fileName)+' · '+(r.size/1024).toFixed(1)+' KB · '+new Date(r.uploadedAt).toLocaleDateString()+'</p></div><button onclick="delReport('+r.id+')" style="background:none;border:none;color:#ef4444;font-size:1.4rem;cursor:pointer;padding:0;line-height:1;flex-shrink:0">×</button></div>').join('');
+}
+function delReport(id){Storage.deleteReport(id);renderReports();toast('Report removed.');}
+const dz=document.getElementById('dropZ');
+dz.addEventListener('dragover',e=>{e.preventDefault();dz.style.borderColor='#0f766e';});
+dz.addEventListener('dragleave',()=>dz.style.borderColor='#e2e8f0');
+dz.addEventListener('drop',e=>{e.preventDefault();dz.style.borderColor='#e2e8f0';const f=e.dataTransfer.files[0];if(f){chosenFile=f;document.getElementById('rPreview').textContent='📎 '+f.name;if(!document.getElementById('rLabel').value)document.getElementById('rLabel').value=f.name.replace(/\.[^.]+$/,'');}});
+
+/* MESSAGE */
+function setupMsgSection(){ if(!PR.caregiverId){document.getElementById('noCgMsg').style.display='block';document.getElementById('cgMsgForm').style.display='none';} }
+function sendMsgToCg(){
+  const text=document.getElementById('ptMsgText').value.trim();
+  if(!text){toast('⚠️ Type a message');return;}if(!PR.caregiverId){toast('⚠️ No caregiver linked');return;}
+  Notif.pt_Message(PR.caregiverId,U.name,text);
+  Storage.addHistory(PID,'message','Message sent to caregiver: '+text.slice(0,60));
+  document.getElementById('ptMsgText').value='';
+  const s=document.getElementById('ptMsgStatus');s.textContent='✅ Message sent!';s.style.color='#166534';s.style.display='block';setTimeout(()=>s.style.display='none',3000);
+  toast('💬 Message sent!');
+}
+
+/* HISTORY */
+const H_CLS={water:'#e0f2fe',medicine:'#fef9c3',appointment:'#ede9fe',sos:'#fff1f2',report:'#f0fdf4',message:'#dcfce7'};
+function renderHistory(){
+  const h=Storage.getHistory(PID), el=document.getElementById('histList');
+  if(!h.length){el.innerHTML='<p style="color:#94a3b8;font-size:.85rem">No activity yet.</p>';return;}
+  el.innerHTML=h.map(e=>'<div style="display:flex;gap:10px;align-items:flex-start;padding:8px 0;border-bottom:1px solid #f8fafc"><div style="width:10px;height:10px;border-radius:50%;background:'+(H_CLS[e.type]||'#f1f5f9')+';flex-shrink:0;margin-top:4px;border:2px solid rgba(0,0,0,.1)"></div><div><p style="margin:0;font-size:.82rem;color:#1e293b">'+esc(e.msg)+'</p><p style="margin:0;font-size:.7rem;color:#94a3b8">'+new Date(e.ts).toLocaleString()+'</p></div></div>').join('');
+}
+function clearHistory(){if(confirm('Clear all activity?')){Storage.clearHistory(PID);renderHistory();}}
+
+/* LOGOUT */
+function doLogout(){Notif.stopWater();Notif.stopMedCheck();Storage.logout();location.href='index.html';}
+
+/* INIT */
+(function(){
+  const savedW=Storage.getWaterMins(U.id);
+  if(savedW){document.getElementById('wSelect').value=savedW;toggleWater();}
+  Notif.startMedCheck(()=>Storage.medicinesFor(PID),PID,U.id,PR.caregiverId||null,U.name);
+  renderOverview();
+})();
+</script>
+</body>
+</html>

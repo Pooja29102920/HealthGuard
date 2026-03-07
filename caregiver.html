@@ -1,0 +1,441 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+  <meta name="theme-color" content="#1d4ed8"/>
+  <meta name="mobile-web-app-capable" content="yes"/>
+  <meta name="apple-mobile-web-app-capable" content="yes"/>
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+  <title>HealthGuard - Caregiver</title>
+  <link rel="stylesheet" href="app.css"/>
+  <style>
+    *,*::before,*::after{box-sizing:border-box}
+    html,body{margin:0;padding:0;height:100%;background:#eff6ff;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif}
+    .serif{font-family:Georgia,'Times New Roman',serif}
+    #app{display:flex;flex-direction:column;height:100vh;height:100dvh;overflow:hidden}
+    #topbar{background:linear-gradient(135deg,#1d4ed8,#0891b2);color:#fff;display:flex;align-items:center;gap:10px;padding:12px 14px;padding-top:calc(env(safe-area-inset-top,0px) + 12px);flex-shrink:0;z-index:30}
+    #menuBtn{background:none;border:none;color:#fff;cursor:pointer;padding:6px;border-radius:8px;display:flex;align-items:center;-webkit-tap-highlight-color:transparent}
+    #menuBtn:active{background:rgba(255,255,255,.15)}
+    #drawer{position:fixed;top:0;left:0;bottom:0;width:min(290px,85vw);background:#fff;z-index:200;transform:translateX(-100%);transition:transform .28s cubic-bezier(.4,0,.2,1);display:flex;flex-direction:column;box-shadow:4px 0 30px rgba(0,0,0,.2)}
+    #drawer.open{transform:translateX(0)}
+    #drawerOverlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:199}
+    #drawerOverlay.open{display:block}
+    #drawerHead{background:linear-gradient(135deg,#1d4ed8,#0891b2);padding:calc(env(safe-area-inset-top,0px)+20px) 18px 20px;color:#fff}
+    .dh-logo{display:flex;align-items:center;gap:8px;margin-bottom:14px}
+    .dh-logo span{font-size:1.2rem;font-weight:700;font-family:Georgia,serif}
+    .dh-role{font-size:.65rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:rgba(255,255,255,.65);margin:0 0 2px}
+    .dh-name{font-size:.9rem;font-weight:700;color:#fff;margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .dh-email{font-size:.72rem;color:rgba(255,255,255,.6);margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    #drawerNav{flex:1;overflow-y:auto;padding:10px 8px}
+    .nav-item{display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:12px;cursor:pointer;color:#64748b;font-size:.9rem;font-weight:500;transition:all .15s;user-select:none;-webkit-tap-highlight-color:transparent;margin-bottom:2px}
+    .nav-item.active{background:#1d4ed8;color:#fff;font-weight:700}
+    .nav-item:not(.active):active{background:#eff6ff;color:#1d4ed8}
+    .nav-sep{height:1px;background:#f1f5f9;margin:6px 14px}
+    #drawerFoot{padding:8px 8px calc(env(safe-area-inset-bottom,0px)+12px)}
+    #permBanner{background:linear-gradient(90deg,#1d4ed8,#0891b2);color:#fff;padding:9px 14px;display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;font-size:.78rem;flex-shrink:0}
+    #permBanner.gone{display:none!important}
+    #pageContent{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:14px;padding-bottom:28px}
+    .card{background:#fff;border-radius:16px;box-shadow:0 2px 10px rgba(0,0,0,.07);padding:16px;margin-bottom:14px}
+    .inp{display:block;width:100%;border:1.5px solid #e2e8f0;border-radius:10px;padding:11px 13px;font-size:16px;outline:none;font-family:inherit;background:#fafafa;transition:border-color .2s}
+    .inp:focus{border-color:#1d4ed8;background:#fff}
+    select.inp{background:#fff}
+    textarea.inp{resize:vertical;min-height:80px}
+    .btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;background:#1d4ed8;color:#fff;border:none;border-radius:10px;padding:12px 18px;font-size:.9rem;font-weight:600;cursor:pointer;font-family:inherit;-webkit-tap-highlight-color:transparent;transition:transform .1s}
+    .btn:active{transform:scale(.97)}
+    .btn.full{width:100%}
+    .btn-teal{background:#0f766e}
+    .btn-red{background:#ef4444}
+    .btn-purple{background:#7c3aed}
+    .sec{display:none!important}
+    .sec.on{display:block!important}
+    #toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#1e293b;color:#fff;padding:10px 20px;border-radius:99px;font-size:.83rem;font-weight:500;opacity:0;pointer-events:none;transition:opacity .3s;z-index:500;max-width:calc(100vw - 32px);text-align:center;white-space:nowrap}
+    #toast.show{opacity:1}
+    .pcard{border:2px solid #e2e8f0;border-radius:14px;padding:14px;margin-bottom:10px;-webkit-tap-highlight-color:transparent}
+    .pcard:active{border-color:#1d4ed8}
+    .stab{padding:8px 16px;border-radius:8px;font-size:.82rem;font-weight:600;cursor:pointer;border:none;font-family:inherit;-webkit-tap-highlight-color:transparent}
+    .stab.on{background:#1d4ed8;color:#fff}
+    .stab:not(.on){background:#dbeafe;color:#1e40af}
+    #ptModal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:300;align-items:flex-end;justify-content:center}
+    #ptModal.open{display:flex}
+    #ptModalInner{background:#fff;width:100%;max-width:560px;border-radius:20px 20px 0 0;max-height:90vh;overflow:hidden;display:flex;flex-direction:column}
+    .badge{display:inline-block;border-radius:999px;font-size:.68rem;font-weight:700;padding:2px 8px}
+    .ok-msg{color:#166534;font-size:.78rem;margin-top:6px}
+    .err-msg{color:#b91c1c;font-size:.78rem;margin-top:6px}
+    .hidden{display:none}
+    .sos-dot{display:inline-block;width:8px;height:8px;background:#ef4444;border-radius:50%;animation:sdot 1.5s infinite;margin-left:4px}
+    @keyframes sdot{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.4;transform:scale(1.5)}}
+  </style>
+</head>
+<body>
+<div id="app">
+  <div id="drawerOverlay" onclick="closeSide()"></div>
+  <div id="drawer">
+    <div id="drawerHead">
+      <div class="dh-logo">
+        <svg width="22" height="22" fill="none" stroke="#fff" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/></svg>
+        <span>HealthGuard</span>
+      </div>
+      <p class="dh-role">Caregiver</p>
+      <p class="dh-name" id="sdName">-</p>
+      <p class="dh-email" id="sdEmail">-</p>
+    </div>
+    <nav id="drawerNav">
+      <div class="nav-item active" data-sec="patients"     onclick="nav(this,'My Patients')">👥  My Patients</div>
+      <div class="nav-item"        data-sec="assign"       onclick="nav(this,'Assign Medicine')">💊  Assign Medicine</div>
+      <div class="nav-item"        data-sec="cgReports"    onclick="nav(this,'Upload Report')">📋  Upload Report</div>
+      <div class="nav-item"        data-sec="message"      onclick="nav(this,'Send Message')">📩  Send Message</div>
+      <div class="nav-item"        data-sec="appointments" onclick="nav(this,'Appointments')">📅  Appointments</div>
+      <div class="nav-item"        data-sec="allReports"   onclick="nav(this,'Patient Reports')">📄  Patient Reports</div>
+      <div class="nav-item"        data-sec="location"     onclick="nav(this,'Location')">📍  Location</div>
+      <div class="nav-item"        data-sec="history"      onclick="nav(this,'Activity Log')">🕐  Activity Log</div>
+    </nav>
+    <div class="nav-sep"></div>
+    <div id="drawerFoot">
+      <div class="nav-item" style="color:#ef4444" onclick="doLogout()">🚪  Sign Out</div>
+    </div>
+  </div>
+
+  <div id="topbar">
+    <button id="menuBtn" onclick="openSide()">
+      <svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16"/></svg>
+    </button>
+    <div style="flex:1;min-width:0">
+      <p id="topTitle" class="serif" style="margin:0;font-size:1rem;font-weight:700;color:#fff">My Patients</p>
+      <p id="topSub" style="margin:0;font-size:.68rem;color:rgba(255,255,255,.7)"></p>
+    </div>
+    <span class="badge" style="background:rgba(255,255,255,.2);color:#fff;font-size:.65rem">Caregiver</span>
+    <div id="bellSlot"></div>
+  </div>
+
+  <div id="permBanner">
+    <span>🔔 Enable notifications for SOS alarms and sounds</span>
+    <div style="display:flex;gap:8px;flex-shrink:0">
+      <button onclick="enableNotifs()" style="background:#fff;color:#1d4ed8;border:none;border-radius:8px;padding:5px 12px;font-weight:700;font-size:.78rem;cursor:pointer;font-family:inherit">Enable</button>
+      <button onclick="document.getElementById('permBanner').classList.add('gone')" style="background:rgba(255,255,255,.2);color:#fff;border:none;border-radius:8px;padding:5px 10px;font-size:.78rem;cursor:pointer">X</button>
+    </div>
+  </div>
+
+  <div id="pageContent">
+
+    <!-- PATIENTS -->
+    <div id="sec-patients" class="sec on">
+      <div class="card">
+        <h3 style="margin:0 0 12px;font-size:.95rem;font-weight:700;color:#1e293b">Add Patient</h3>
+        <div style="display:flex;gap:8px;margin-bottom:12px">
+          <button class="stab on" id="tabEmail" onclick="switchAddTab('email')">By Email</button>
+          <button class="stab" id="tabManual" onclick="switchAddTab('manual')">Manual</button>
+        </div>
+        <div id="addEmail">
+          <p style="font-size:.75rem;color:#94a3b8;margin:0 0 8px">Link patient with HealthGuard account:</p>
+          <div style="display:flex;gap:8px">
+            <input id="ptEmail" type="email" class="inp" placeholder="patient@example.com" style="flex:1"/>
+            <button class="btn" style="flex-shrink:0" onclick="addByEmail()">Link</button>
+          </div>
+          <p id="emailMsg" class="hidden"></p>
+        </div>
+        <div id="addManual" style="display:none">
+          <div style="display:flex;flex-direction:column;gap:8px">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+              <input id="pmName" class="inp" placeholder="Full name *"/>
+              <input id="pmAge" class="inp" type="number" placeholder="Age *"/>
+            </div>
+            <input id="pmCondition" class="inp" placeholder="Condition"/>
+            <input id="pmContact" class="inp" placeholder="Contact"/>
+            <input id="pmNotes" class="inp" placeholder="Notes"/>
+          </div>
+          <button class="btn" style="margin-top:10px" onclick="addManual()">+ Add Patient</button>
+          <p id="manualMsg" class="hidden"></p>
+        </div>
+      </div>
+      <div class="card">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+          <h3 style="margin:0;font-size:.95rem;font-weight:700;color:#1e293b">Patient List</h3>
+          <span id="ptCount" class="badge" style="background:#dbeafe;color:#1d4ed8">0 patients</span>
+        </div>
+        <div id="ptList"><p style="color:#94a3b8;font-size:.85rem">No patients yet.</p></div>
+      </div>
+    </div>
+
+    <!-- ASSIGN MEDICINE -->
+    <div id="sec-assign" class="sec">
+      <div class="card">
+        <h3 style="margin:0 0 4px;font-size:.95rem;font-weight:700;color:#1e293b">💊 Assign Medicine</h3>
+        <p style="margin:0 0 14px;font-size:.75rem;color:#94a3b8">Patient gets a sound notification instantly.</p>
+        <div style="display:flex;flex-direction:column;gap:10px">
+          <select id="asnPt" class="inp" onchange="renderAssigned()"><option value="">Select patient</option></select>
+          <input id="asnName" class="inp" placeholder="Medicine name *"/>
+          <input id="asnDose" class="inp" placeholder="Dosage *"/>
+          <input id="asnTime" class="inp" type="time"/>
+          <input id="asnNotes" class="inp" placeholder="Instructions (optional)"/>
+          <button class="btn full" onclick="assignMed()">💊 Assign Medicine</button>
+          <p id="asnMsg" class="hidden"></p>
+        </div>
+        <div style="margin-top:16px;padding-top:14px;border-top:1px solid #f1f5f9">
+          <p style="margin:0 0 10px;font-weight:600;font-size:.85rem;color:#374151">Assigned by you</p>
+          <div id="asnList"><p style="color:#94a3b8;font-size:.85rem">Select patient above.</p></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- UPLOAD REPORT -->
+    <div id="sec-cgReports" class="sec">
+      <div class="card">
+        <h3 style="margin:0 0 4px;font-size:.95rem;font-weight:700;color:#1e293b">📋 Upload Report for Patient</h3>
+        <p style="margin:0 0 14px;font-size:.75rem;color:#94a3b8">Patient gets a sound notification when you upload.</p>
+        <div style="display:flex;flex-direction:column;gap:10px">
+          <select id="repPt" class="inp"><option value="">Select patient</option></select>
+          <div id="cgDropZ" onclick="document.getElementById('cgRFile').click()" style="border:2px dashed #e2e8f0;border-radius:12px;padding:20px;text-align:center;cursor:pointer;transition:border-color .2s">
+            <div style="font-size:2rem;margin-bottom:4px">📁</div>
+            <p style="margin:0;font-size:.8rem;color:#94a3b8">Tap to select file</p>
+            <input type="file" id="cgRFile" accept=".pdf,image/*" style="display:none" onchange="cgFileChosen(this)"/>
+          </div>
+          <p id="cgRPreview" style="font-size:.75rem;color:#1d4ed8;margin:0"></p>
+          <input id="cgRLabel" class="inp" placeholder="Report label *"/>
+          <button class="btn full" onclick="cgUploadReport()">📋 Upload and Notify Patient</button>
+          <p id="cgRepMsg" class="hidden"></p>
+        </div>
+      </div>
+    </div>
+
+    <!-- SEND MESSAGE -->
+    <div id="sec-message" class="sec">
+      <div class="card">
+        <h3 style="margin:0 0 4px;font-size:.95rem;font-weight:700;color:#1e293b">📩 Send Message</h3>
+        <p style="margin:0 0 14px;font-size:.75rem;color:#94a3b8">Patient gets an instant sound pop-up notification.</p>
+        <div style="display:flex;flex-direction:column;gap:10px">
+          <select id="msgPt" class="inp"><option value="">Select patient</option></select>
+          <textarea id="msgText" class="inp" rows="4" placeholder="Type your message..."></textarea>
+          <button class="btn full btn-purple" onclick="sendMessage()">📩 Send Notification</button>
+          <p id="msgStatus" style="font-size:.8rem;text-align:center;display:none"></p>
+        </div>
+        <div style="margin-top:16px;padding-top:14px;border-top:1px solid #f1f5f9">
+          <p style="margin:0 0 10px;font-weight:600;font-size:.85rem;color:#374151">Recently Sent</p>
+          <div id="sentList"><p style="color:#94a3b8;font-size:.85rem">None yet.</p></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- APPOINTMENTS -->
+    <div id="sec-appointments" class="sec">
+      <div class="card">
+        <h3 style="margin:0 0 4px;font-size:.95rem;font-weight:700;color:#1e293b">📅 Appointments</h3>
+        <p style="margin:0 0 10px;font-size:.75rem;color:#94a3b8">You get a sound alert 15 min before each appointment.</p>
+        <select id="apptFilter" class="inp" style="margin-bottom:12px" onchange="renderCgAppts()"><option value="">All patients</option></select>
+        <div id="cgApptList"><p style="color:#94a3b8;font-size:.85rem">No appointments.</p></div>
+      </div>
+    </div>
+
+    <!-- PATIENT REPORTS -->
+    <div id="sec-allReports" class="sec">
+      <div class="card">
+        <h3 style="margin:0 0 10px;font-size:.95rem;font-weight:700;color:#1e293b">📄 Patient Reports</h3>
+        <select id="repFilter" class="inp" style="margin-bottom:12px" onchange="renderCgReports()"><option value="">All patients</option></select>
+        <div id="cgRepList"><p style="color:#94a3b8;font-size:.85rem">No reports.</p></div>
+      </div>
+    </div>
+
+    <!-- LOCATION -->
+    <div id="sec-location" class="sec">
+      <div class="card">
+        <h3 style="margin:0 0 4px;font-size:.95rem;font-weight:700;color:#1e293b">📍 Patient Location</h3>
+        <p style="margin:0 0 12px;font-size:.75rem;color:#94a3b8">You get an instant alarm when a patient sends SOS.</p>
+        <select id="locFilter" class="inp" style="margin-bottom:12px" onchange="renderCgLoc()"><option value="">Select patient</option></select>
+        <div id="cgLocInfo"><p style="color:#94a3b8;font-size:.85rem">Select patient above.</p></div>
+        <div style="margin-top:16px;padding-top:14px;border-top:1px solid #f1f5f9">
+          <p style="margin:0 0 8px;font-weight:600;font-size:.85rem;color:#374151">Your Location</p>
+          <button class="btn btn-teal" onclick="getMyLoc()">📡 Get My Location</button>
+          <div id="myLoc" style="margin-top:8px;font-size:.8rem;color:#64748b"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- HISTORY -->
+    <div id="sec-history" class="sec">
+      <div class="card">
+        <h3 style="margin:0 0 10px;font-size:.95rem;font-weight:700;color:#1e293b">🕐 Activity Log</h3>
+        <select id="histFilter" class="inp" style="margin-bottom:12px" onchange="renderCgHist()"><option value="">Select patient</option></select>
+        <div id="cgHistList"><p style="color:#94a3b8;font-size:.85rem">Select patient above.</p></div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<div id="ptModal">
+  <div id="ptModalInner">
+    <div style="background:linear-gradient(135deg,#1d4ed8,#0891b2);color:#fff;padding:16px 20px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0">
+      <h3 id="modalTitle" class="serif" style="margin:0;font-size:1rem">Patient Details</h3>
+      <button onclick="closeModal()" style="background:none;border:none;color:#fff;font-size:1.4rem;cursor:pointer;line-height:1">X</button>
+    </div>
+    <div id="modalBody" style="padding:16px;overflow-y:auto;flex:1"></div>
+  </div>
+</div>
+
+<script src="js/storage.js"></script>
+<script src="js/location.js"></script>
+<script src="js/notifications.js"></script>
+<script>
+const U = Storage.currentUser();
+if (!U || U.role !== 'caregiver') { location.href='index.html'; throw 0; }
+const CID = U.id;
+
+document.getElementById('sdName').textContent  = U.name;
+document.getElementById('sdEmail').textContent = U.email;
+document.getElementById('topSub').textContent  = new Date().toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'});
+
+if (window.Notification && Notification.permission==='granted') document.getElementById('permBanner').classList.add('gone');
+function enableNotifs(){ Notif.requestPermission(ok=>{ document.getElementById('permBanner').classList.add('gone'); if(ok) toast('Sound alerts enabled!'); }); }
+
+Notif.injectBell(document.getElementById('bellSlot'), U.id, '#1d4ed8');
+Notif.startListening(U.id, n => {
+  if (n.type==='sos_alert') { const lf=document.getElementById('locFilter'); if(lf&&lf.value) renderCgLoc(); renderPatients(); }
+  if (n.type==='new_appointment'||n.type==='new_medicine') { if(document.getElementById('sec-appointments').classList.contains('on')) renderCgAppts(); }
+});
+
+Notif.startApptCheck(()=>{
+  const rows=[]; myPatients().forEach(p=>Storage.appointmentsFor(p.id).forEach(a=>rows.push({appt:a,patientName:p.name})));
+  return rows;
+}, CID);
+
+function openSide(){ document.getElementById('drawer').classList.add('open'); document.getElementById('drawerOverlay').classList.add('open'); }
+function closeSide(){ document.getElementById('drawer').classList.remove('open'); document.getElementById('drawerOverlay').classList.remove('open'); }
+
+const REFRESH={
+  patients:renderPatients,
+  assign:()=>{ fillDropdowns(); renderAssigned(); },
+  cgReports:()=>{ fillDropdowns(); },
+  message:()=>{ fillDropdowns(); renderSentMessages(); },
+  appointments:()=>{ fillDropdowns(); renderCgAppts(); },
+  allReports:()=>{ fillDropdowns(); renderCgReports(); },
+  location:()=>{ fillDropdowns(); renderCgLoc(); },
+  history:()=>{ fillDropdowns(); renderCgHist(); },
+};
+
+function nav(el,title){
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  el.classList.add('active');
+  document.querySelectorAll('.sec').forEach(s=>s.classList.remove('on'));
+  document.getElementById('sec-'+el.dataset.sec).classList.add('on');
+  document.getElementById('topTitle').textContent=title;
+  if(REFRESH[el.dataset.sec]) REFRESH[el.dataset.sec]();
+  closeSide();
+  document.getElementById('pageContent').scrollTop=0;
+}
+
+function toast(msg,dur=2800){ const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),dur); }
+function esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function myPatients(){ return Storage.patientsForCaregiver(CID); }
+function showMsg(id,txt,ok){ const e=document.getElementById(id); e.textContent=txt; e.className=ok?'ok-msg':'err-msg'; e.classList.remove('hidden'); setTimeout(()=>e.classList.add('hidden'),4000); }
+
+function switchAddTab(t){ const e=t==='email'; document.getElementById('addEmail').style.display=e?'block':'none'; document.getElementById('addManual').style.display=e?'none':'block'; document.getElementById('tabEmail').classList.toggle('on',e); document.getElementById('tabManual').classList.toggle('on',!e); }
+
+function addByEmail(){ const email=document.getElementById('ptEmail').value.trim(); if(!email){showMsg('emailMsg','Enter an email.',false);return;} const r=Storage.linkPatientByEmail(CID,email); if(!r.ok){showMsg('emailMsg',r.msg,false);return;} document.getElementById('ptEmail').value=''; showMsg('emailMsg','Linked: '+r.patient.name,true); renderPatients(); fillDropdowns(); toast('Patient linked!'); }
+function addManual(){ const name=document.getElementById('pmName').value.trim(), age=document.getElementById('pmAge').value.trim(); if(!name){showMsg('manualMsg','Name required.',false);return;} if(!age){showMsg('manualMsg','Age required.',false);return;} Storage.addManualPatient(CID,name,age,document.getElementById('pmCondition').value.trim(),document.getElementById('pmContact').value.trim(),document.getElementById('pmNotes').value.trim()); ['pmName','pmAge','pmCondition','pmContact','pmNotes'].forEach(id=>document.getElementById(id).value=''); showMsg('manualMsg','Patient added!',true); renderPatients(); fillDropdowns(); toast('Patient added!'); }
+
+function renderPatients(){
+  const pts=myPatients(); const el=document.getElementById('ptList');
+  document.getElementById('ptCount').textContent=pts.length+' patient'+(pts.length!==1?'s':'');
+  if(!pts.length){el.innerHTML='<p style="color:#94a3b8;font-size:.85rem">No patients yet.</p>';return;}
+  el.innerHTML=pts.map(p=>{
+    const sos=Storage.getSOS(p.id);
+    return '<div class="pcard"><div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:8px"><div style="display:flex;gap:8px;align-items:center"><span style="font-size:1.4rem">👤</span><div><p style="margin:0;font-weight:700;font-size:.875rem;color:#1e293b">'+esc(p.name)+(sos?'<span class="sos-dot"></span>':'')+'</p><p style="margin:0;font-size:.72rem;color:#64748b">'+(p.age?p.age+' yrs':'')+(p.condition?' - '+esc(p.condition):'')+'</p></div></div><button onclick="confirmDelete(\''+p.id+'\',\''+esc(p.name)+'\')" style="background:none;border:none;color:#fca5a5;cursor:pointer;font-size:1.3rem;line-height:1;padding:4px">x</button></div>'
+      +(p.contact?'<p style="font-size:.72rem;color:#94a3b8;margin:0 0 6px">'+esc(p.contact)+'</p>':'')
+      +'<span class="badge" style="background:'+(p.userId?'#d1fae5':'#f1f5f9')+';color:'+(p.userId?'#065f46':'#64748b')+'">'+(p.userId?'Linked':'Manual')+'</span>'
+      +'<div style="display:flex;flex-wrap:wrap;gap:10px;margin-top:10px"><button onclick="openModal(\''+p.id+'\')" style="background:none;border:none;font-size:.78rem;font-weight:700;color:#1d4ed8;cursor:pointer;padding:0;font-family:inherit">View</button><button onclick="quickAssign(\''+p.id+'\')" style="background:none;border:none;font-size:.78rem;font-weight:700;color:#0f766e;cursor:pointer;padding:0;font-family:inherit">Assign Med</button>'+(p.userId?'<button onclick="quickMessage(\''+p.id+'\')" style="background:none;border:none;font-size:.78rem;font-weight:700;color:#7c3aed;cursor:pointer;padding:0;font-family:inherit">Message</button>':'')+'<button onclick="quickReport(\''+p.id+'\')" style="background:none;border:none;font-size:.78rem;font-weight:700;color:#0891b2;cursor:pointer;padding:0;font-family:inherit">Report</button></div></div>';
+  }).join('');
+}
+
+function confirmDelete(pid,name){ if(!confirm('Remove '+name+'? All data will be deleted.'))return; Storage.deletePatient(pid); renderPatients(); fillDropdowns(); toast(name+' removed.'); }
+
+function openModal(pid){
+  const p=myPatients().find(x=>x.id===pid); if(!p)return;
+  document.getElementById('modalTitle').textContent=p.name;
+  document.getElementById('ptModal').classList.add('open');
+  const meds=Storage.medicinesFor(pid), appts=Storage.appointmentsFor(pid).filter(a=>new Date(a.date+'T'+a.time)>=new Date()), reps=Storage.reportsFor(pid), sos=Storage.getSOS(pid);
+  document.getElementById('modalBody').innerHTML='<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px"><div style="background:#eff6ff;border-radius:10px;padding:12px"><p style="margin:0 0 4px;font-size:.7rem;font-weight:700;color:#1d4ed8;text-transform:uppercase">Info</p><p style="margin:0;font-size:.82rem"><b>Age:</b> '+esc(p.age||'?')+'</p>'+(p.condition?'<p style="margin:2px 0 0;font-size:.82rem">'+esc(p.condition)+'</p>':'')+(p.contact?'<p style="margin:2px 0 0;font-size:.82rem">'+esc(p.contact)+'</p>':'')+'</div><div style="background:#fff1f2;border-radius:10px;padding:12px"><p style="margin:0 0 4px;font-size:.7rem;font-weight:700;color:#e11d48;text-transform:uppercase">SOS</p>'+(sos?'<p style="margin:0;font-size:.78rem">'+sos.lat.toFixed(4)+', '+sos.lng.toFixed(4)+'</p><a href="'+Location.mapsUrl(sos.lat,sos.lng)+'" target="_blank" style="font-size:.75rem;color:#1d4ed8">Map</a>':'<p style="font-size:.78rem;color:#94a3b8">None</p>')+'</div></div>'
+    +'<p style="margin:0 0 6px;font-size:.7rem;font-weight:700;color:#b45309;text-transform:uppercase">Medicines ('+meds.length+')</p>'+(meds.length?meds.map(m=>'<div style="display:flex;align-items:center;justify-content:space-between;background:#fefce8;border-radius:8px;padding:8px 10px;margin-bottom:6px;font-size:.78rem"><span>'+esc(m.name)+' - '+esc(m.dosage)+' @ '+m.time+'</span>'+(m.by==='caregiver'?'<button onclick="revokeMed('+m.id+',\''+pid+'\')" style="background:none;border:none;color:#ef4444;cursor:pointer;font-size:.72rem;font-family:inherit;font-weight:700">Revoke</button>':'<span style="color:#94a3b8">pt</span>')+'</div>').join(''):'<p style="font-size:.8rem;color:#94a3b8;margin-bottom:8px">None.</p>')
+    +'<p style="margin:8px 0 6px;font-size:.7rem;font-weight:700;color:#6d28d9;text-transform:uppercase">Appointments ('+appts.length+')</p>'+(appts.length?appts.map(a=>'<p style="background:#ede9fe;border-radius:8px;padding:8px;margin-bottom:6px;font-size:.78rem;margin-top:0">'+esc(a.doctor)+' - '+a.date+' '+a.time+'</p>').join(''):'<p style="font-size:.8rem;color:#94a3b8;margin-bottom:8px">None.</p>')
+    +'<p style="margin:8px 0 6px;font-size:.7rem;font-weight:700;color:#15803d;text-transform:uppercase">Reports ('+reps.length+')</p>'+(reps.length?reps.map(r=>'<p style="background:#f0fdf4;border-radius:8px;padding:8px;margin-bottom:6px;font-size:.78rem;margin-top:0">'+esc(r.label)+' - '+new Date(r.uploadedAt).toLocaleDateString()+'</p>').join(''):'<p style="font-size:.8rem;color:#94a3b8">None.</p>');
+}
+function closeModal(){ document.getElementById('ptModal').classList.remove('open'); }
+document.getElementById('ptModal').addEventListener('click',e=>{ if(e.target===document.getElementById('ptModal')) closeModal(); });
+
+function quickAssign(pid){ nav(document.querySelector('[data-sec=assign]'),'Assign Medicine'); fillDropdowns(); setTimeout(()=>{ document.getElementById('asnPt').value=pid; renderAssigned(); },60); closeModal(); }
+function quickMessage(pid){ nav(document.querySelector('[data-sec=message]'),'Send Message'); fillDropdowns(); setTimeout(()=>document.getElementById('msgPt').value=pid,60); closeModal(); }
+function quickReport(pid){ nav(document.querySelector('[data-sec=cgReports]'),'Upload Report'); fillDropdowns(); setTimeout(()=>document.getElementById('repPt').value=pid,60); closeModal(); }
+
+function fillDropdowns(){
+  const pts=myPatients();
+  ['asnPt','repPt','apptFilter','repFilter','locFilter','histFilter','msgPt'].forEach(id=>{
+    const el=document.getElementById(id); if(!el)return;
+    const prev=el.value; const needsBlank=(id==='asnPt'||id==='repPt'||id==='msgPt');
+    el.innerHTML='<option value="">'+(needsBlank?'Select patient':'All patients')+'</option>'+pts.map(p=>'<option value="'+p.id+'"'+(prev===p.id?' selected':'')+'>'+esc(p.name)+'</option>').join('');
+  });
+}
+
+function assignMed(){
+  const pid=document.getElementById('asnPt').value, name=document.getElementById('asnName').value.trim(), dose=document.getElementById('asnDose').value.trim(), time=document.getElementById('asnTime').value, notes=document.getElementById('asnNotes').value.trim();
+  if(!pid){showMsg('asnMsg','Select patient.',false);return;} if(!name){showMsg('asnMsg','Enter name.',false);return;} if(!dose){showMsg('asnMsg','Enter dosage.',false);return;} if(!time){showMsg('asnMsg','Set time.',false);return;}
+  const pt=myPatients().find(p=>p.id===pid);
+  Storage.addMedicine(pid,name,dose,time,notes,'caregiver');
+  if(pt&&pt.userId) Notif.cg_AssignedMed(pt.userId,U.name,name,dose,time);
+  ['asnName','asnDose','asnTime','asnNotes'].forEach(id=>document.getElementById(id).value='');
+  showMsg('asnMsg','Assigned to '+(pt?pt.name:'patient'),true); renderAssigned(); toast('Medicine assigned - patient notified!');
+}
+function renderAssigned(){
+  const pid=document.getElementById('asnPt')?document.getElementById('asnPt').value:''; const el=document.getElementById('asnList');
+  if(!pid){el.innerHTML='<p style="color:#94a3b8;font-size:.85rem">Select patient above.</p>';return;}
+  const meds=Storage.medicinesFor(pid).filter(m=>m.by==='caregiver');
+  if(!meds.length){el.innerHTML='<p style="color:#94a3b8;font-size:.85rem">None assigned yet.</p>';return;}
+  el.innerHTML=meds.map(m=>'<div style="display:flex;align-items:center;justify-content:space-between;background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;padding:10px 12px;margin-bottom:8px"><div><p style="margin:0;font-weight:700;font-size:.875rem;color:#1e293b">'+esc(m.name)+'</p><p style="margin:2px 0 0;font-size:.75rem;color:#64748b">'+esc(m.dosage)+' at '+m.time+'</p></div><button onclick="revokeMed('+m.id+',\''+pid+'\')" style="background:none;border:none;font-size:.75rem;font-weight:700;color:#ef4444;cursor:pointer;font-family:inherit">Revoke</button></div>').join('');
+}
+function revokeMed(id,pid){ if(!confirm('Revoke this medicine?'))return; Storage.deleteMedicine(id); renderAssigned(); toast('Medicine revoked.'); }
+
+let cgChosenFile=null;
+function cgFileChosen(inp){ cgChosenFile=inp.files[0]; if(!cgChosenFile)return; document.getElementById('cgRPreview').textContent='File: '+cgChosenFile.name; if(!document.getElementById('cgRLabel').value) document.getElementById('cgRLabel').value=cgChosenFile.name.replace(/\.[^.]+$/,''); }
+function cgUploadReport(){
+  const pid=document.getElementById('repPt').value, label=document.getElementById('cgRLabel').value.trim();
+  if(!pid){showMsg('cgRepMsg','Select patient.',false);return;}
+  if(!cgChosenFile){showMsg('cgRepMsg','Select a file.',false);return;}
+  if(!label){showMsg('cgRepMsg','Enter a label.',false);return;}
+  const pt=myPatients().find(p=>p.id===pid);
+  Storage.addReport(pid,label,cgChosenFile.name,cgChosenFile.size);
+  if(pt&&pt.userId) Notif.cg_AddedReport(pt.userId,U.name,label);
+  cgChosenFile=null; document.getElementById('cgRFile').value=''; document.getElementById('cgRLabel').value=''; document.getElementById('cgRPreview').textContent='';
+  showMsg('cgRepMsg','Uploaded - '+(pt?pt.name:'patient')+' notified!',true);
+  toast('Report uploaded - patient notified!');
+}
+const cgdz=document.getElementById('cgDropZ'); cgdz.addEventListener('dragover',e=>{e.preventDefault();cgdz.style.borderColor='#1d4ed8';}); cgdz.addEventListener('dragleave',()=>cgdz.style.borderColor='#e2e8f0'); cgdz.addEventListener('drop',e=>{e.preventDefault();cgdz.style.borderColor='#e2e8f0';const f=e.dataTransfer.files[0];if(f){cgChosenFile=f;document.getElementById('cgRPreview').textContent='File: '+f.name;if(!document.getElementById('cgRLabel').value)document.getElementById('cgRLabel').value=f.name.replace(/\.[^.]+$/,'');}});
+
+const SENT_KEY='hg_cgsent_'+CID;
+function sendMessage(){
+  const pid=document.getElementById('msgPt').value, text=document.getElementById('msgText').value.trim(); const el=document.getElementById('msgStatus');
+  if(!pid){el.textContent='Select patient.';el.style.color='#b91c1c';el.style.display='block';return;}
+  if(!text){el.textContent='Type a message.';el.style.color='#b91c1c';el.style.display='block';return;}
+  const pt=myPatients().find(p=>p.id===pid);
+  if(!pt||!pt.userId){el.textContent='Patient has no account.';el.style.color='#b91c1c';el.style.display='block';return;}
+  Notif.cg_Message(pt.userId,U.name,text);
+  const sent=JSON.parse(localStorage.getItem(SENT_KEY)||'[]'); sent.unshift({pid,ptName:pt.name,msg:text,ts:new Date().toISOString()}); localStorage.setItem(SENT_KEY,JSON.stringify(sent.slice(0,50)));
+  document.getElementById('msgText').value=''; el.textContent='Sent to '+pt.name+'!'; el.style.color='#166534'; el.style.display='block'; setTimeout(()=>el.style.display='none',3000); renderSentMessages(); toast('Message sent!');
+}
+function renderSentMessages(){ const sent=JSON.parse(localStorage.getItem(SENT_KEY)||'[]'); const el=document.getElementById('sentList'); if(!sent.length){el.innerHTML='<p style="color:#94a3b8;font-size:.85rem">None yet.</p>';return;} el.innerHTML=sent.slice(0,8).map(s=>'<div style="background:#f5f3ff;border:1px solid #ddd6fe;border-radius:10px;padding:10px 12px;margin-bottom:8px"><div style="display:flex;justify-content:space-between;margin-bottom:4px"><span style="font-weight:700;font-size:.82rem;color:#1e293b">'+esc(s.ptName)+'</span><span style="font-size:.7rem;color:#94a3b8">'+new Date(s.ts).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})+'</span></div><p style="margin:0;font-size:.78rem;color:#374151">'+esc(s.msg)+'</p></div>').join(''); }
+
+function renderCgAppts(){ const filter=document.getElementById('apptFilter').value, pts=myPatients(), el=document.getElementById('cgApptList'), now=new Date(); let rows=[]; pts.forEach(p=>{ if(filter&&p.id!==filter)return; Storage.appointmentsFor(p.id).forEach(a=>rows.push({...a,ptName:p.name})); }); rows.sort((a,b)=>new Date(a.date+'T'+a.time)-new Date(b.date+'T'+b.time)); if(!rows.length){el.innerHTML='<p style="color:#94a3b8;font-size:.85rem">No appointments.</p>';return;} el.innerHTML=rows.map(a=>{const past=new Date(a.date+'T'+a.time)<now; return '<div style="display:flex;align-items:center;justify-content:space-between;background:'+(past?'#f8fafc':'#f5f3ff')+';border:1px solid '+(past?'#e2e8f0':'#ddd6fe')+';border-radius:10px;padding:10px 12px;margin-bottom:8px;opacity:'+(past?.7:1)+'"><div><p style="margin:0;font-weight:700;font-size:.875rem;color:#1e293b">'+esc(a.doctor)+'</p><p style="margin:2px 0 0;font-size:.72rem;color:#64748b">'+a.date+' at '+a.time+'</p><span class="badge" style="background:#dbeafe;color:#1d4ed8">'+esc(a.ptName)+'</span></div><span class="badge" style="background:'+(past?'#f1f5f9':'#ede9fe')+';color:'+(past?'#94a3b8':'#7c3aed')+'">'+(past?'Past':'Upcoming')+'</span></div>';}).join(''); }
+
+function renderCgReports(){ const filter=document.getElementById('repFilter').value, pts=myPatients(), el=document.getElementById('cgRepList'); let rows=[]; pts.forEach(p=>{ if(filter&&p.id!==filter)return; Storage.reportsFor(p.id).forEach(r=>rows.push({...r,ptName:p.name})); }); if(!rows.length){el.innerHTML='<p style="color:#94a3b8;font-size:.85rem">No reports.</p>';return;} el.innerHTML=rows.map(r=>'<div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;padding:10px 12px;margin-bottom:8px"><p style="margin:0;font-weight:700;font-size:.875rem;color:#1e293b">'+esc(r.label)+'</p><p style="margin:2px 0 0;font-size:.72rem;color:#64748b">'+esc(r.fileName)+' - '+(r.size/1024).toFixed(1)+' KB</p><p style="margin:2px 0 0;font-size:.7rem;color:#94a3b8">'+new Date(r.uploadedAt).toLocaleDateString()+'</p><span class="badge" style="margin-top:4px;background:#dbeafe;color:#1d4ed8">'+esc(r.ptName)+'</span></div>').join(''); }
+
+function renderCgLoc(){ const pid=document.getElementById('locFilter').value, el=document.getElementById('cgLocInfo'); if(!pid){el.innerHTML='<p style="color:#94a3b8;font-size:.85rem">Select patient above.</p>';return;} const sos=Storage.getSOS(pid); if(!sos){el.innerHTML='<p style="color:#94a3b8;font-size:.85rem">No SOS yet.</p>';return;} el.innerHTML='<div style="background:#fff1f2;border:1px solid #fecdd3;border-radius:12px;padding:14px"><p style="margin:0 0 8px;font-weight:700;color:#e11d48;font-size:.875rem">Last SOS</p><p style="margin:0;font-size:.82rem">Lat: '+sos.lat.toFixed(6)+'</p><p style="margin:2px 0 0;font-size:.82rem">Lng: '+sos.lng.toFixed(6)+'</p><p style="margin:4px 0 0;font-size:.72rem;color:#94a3b8">'+new Date(sos.ts).toLocaleString()+'</p><a href="'+Location.mapsUrl(sos.lat,sos.lng)+'" target="_blank" style="display:inline-block;margin-top:8px;color:#1d4ed8;font-size:.8rem;font-weight:600">Open in Google Maps</a></div>'; }
+async function getMyLoc(){ const el=document.getElementById('myLoc'); el.textContent='Fetching...'; try{ const c=await Location.get(); el.innerHTML='Lat: '+c.lat.toFixed(6)+' Lng: '+c.lng.toFixed(6)+' +/-'+Math.round(c.accuracy)+'m<br><a href="'+Location.mapsUrl(c.lat,c.lng)+'" target="_blank" style="color:#1d4ed8;font-size:.75rem">Open Map</a>'; } catch(e){ el.textContent='Error: '+e; } }
+
+const H_BG={water:'#e0f2fe',medicine:'#fef9c3',appointment:'#ede9fe',sos:'#fff1f2',report:'#f0fdf4',message:'#dcfce7'};
+function renderCgHist(){ const pid=document.getElementById('histFilter').value, el=document.getElementById('cgHistList'); if(!pid){el.innerHTML='<p style="color:#94a3b8;font-size:.85rem">Select patient above.</p>';return;} const h=Storage.getHistory(pid); if(!h.length){el.innerHTML='<p style="color:#94a3b8;font-size:.85rem">No activity.</p>';return;} el.innerHTML=h.map(e=>'<div style="display:flex;gap:10px;align-items:flex-start;padding:8px 0;border-bottom:1px solid #f8fafc"><div style="width:10px;height:10px;border-radius:50%;background:'+(H_BG[e.type]||'#f1f5f9')+';flex-shrink:0;margin-top:4px;border:2px solid rgba(0,0,0,.1)"></div><div><p style="margin:0;font-size:.82rem;color:#1e293b">'+esc(e.msg)+'</p><p style="margin:0;font-size:.7rem;color:#94a3b8">'+new Date(e.ts).toLocaleString()+'</p></div></div>').join(''); }
+
+function doLogout(){ Notif.stopApptCheck(); Storage.logout(); location.href='index.html'; }
+
+renderPatients(); fillDropdowns();
+</script>
+</body>
+</html>
